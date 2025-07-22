@@ -26,3 +26,11 @@ func GetAPIKey() string {
 	}
 	return apiKey
 }
+
+func GetDatabaseURL() string {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://user:password@localhost:5432/dmt_db?sslmode=disable"
+	}
+	return dbURL
+}
