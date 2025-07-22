@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"dmt/config"
 	"dmt/internals"
+	"dmt/internals/config"
 	"log"
 )
 
