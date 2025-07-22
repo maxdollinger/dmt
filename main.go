@@ -1,34 +1,28 @@
 package main
 
 import (
+	"dmt/config"
+	"dmt/internals/middleware"
 	"log"
-	"os"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 func main() {
+	apiKey := config.GetAPIKey()
+
 	app := fiber.New()
 
 	app.Use(logger.New())
-	app.Use(cors.New())
+	app.Use(recover.New())
+	app.Use(middleware.KeyAuthMiddleware(apiKey))
 
-	port := getPort()
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
+	})
+
+	port := config.GetPort()
 	log.Fatal(app.Listen(":" + port))
-}
-
-func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
-	if port, err := strconv.Atoi(port); err != nil || port < 1 || port > 65535 {
-		log.Fatalf("Invalid port number: %d", port)
-	}
-
-	return port
 }
