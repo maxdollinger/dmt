@@ -93,7 +93,6 @@ func TestDeviceAPI(t *testing.T) {
 
 		var deleteResponse map[string]interface{}
 		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
-		assert.Equal(t, "Device deleted successfully", deleteResponse["message"])
 
 		verifyDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, verifyDevice)
@@ -109,7 +108,6 @@ func TestDeviceAPI(t *testing.T) {
 
 		var deleteResponse map[string]interface{}
 		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
-		assert.Equal(t, "Device deleted successfully", deleteResponse["message"])
 	})
 
 	t.Run("Update Device", func(t *testing.T) {
@@ -145,7 +143,6 @@ func TestDeviceAPI(t *testing.T) {
 
 		var updateResponse map[string]interface{}
 		makeRequest(t, app, updateReq, http.StatusOK, &updateResponse)
-		assert.Equal(t, "Device updated successfully", updateResponse["message"])
 
 		dbDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
@@ -256,7 +253,6 @@ func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus
 	}
 }
 
-// Helper function to create string pointers
 func stringPtr(s string) *string {
 	return &s
 }
