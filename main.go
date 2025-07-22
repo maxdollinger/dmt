@@ -3,37 +3,19 @@ package main
 import (
 	"context"
 	"dmt/config"
-	"dmt/internals/middleware"
-	"dmt/pkg/device"
+	"dmt/internals"
 	"log"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/jackc/pgx/v5"
 )
 
 func main() {
 	apiKey := config.GetAPIKey()
 	databaseURL := config.GetDatabaseURL()
 
-	// Connect to database
-	conn, err := pgx.Connect(context.Background(), databaseURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-	defer conn.Close(context.Background())
+	ctx := context.Background()
+	db := internals.ConnectDb(ctx, databaseURL)
+	defer db.Close(ctx)
 
-	app := fiber.New()
-
-	app.Use(logger.New())
-	app.Use(recover.New())
-	app.Use(middleware.KeyAuthMiddleware(apiKey))
-
-	deviceService := device.NewDeviceService(conn)
-
-	app.Post("/devices", deviceService.CreateDevice)
-	app.Get("/devices/:id", deviceService.GetDevice)
+	app := internals.CreateApp(db, apiKey)
 
 	port := config.GetPort()
 	log.Fatal(app.Listen(":" + port))
