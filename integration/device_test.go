@@ -14,7 +14,6 @@ import (
 )
 
 func TestDeviceAPI(t *testing.T) {
-	// Setup test database container
 	testDB := SetupTestDB(t)
 	defer testDB.Cleanup(t)
 
@@ -82,6 +81,85 @@ func TestDeviceAPI(t *testing.T) {
 		resp, err := app.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("Delete Device", func(t *testing.T) {
+		app := testDB.CreateApp(t)
+
+		deviceData := map[string]interface{}{
+			"name": "Delete Test Device",
+			"type": "tablet",
+			"ip":   "192.168.1.102",
+			"mac":  "aa:bb:cc:dd:ee:ff",
+		}
+
+		jsonData, err := json.Marshal(deviceData)
+		require.NoError(t, err)
+
+		createReq := httptest.NewRequest("POST", "/devices", bytes.NewBuffer(jsonData))
+		createReq.Header.Set(GetAuthHeader())
+		createReq.Header.Set("Content-Type", "application/json")
+
+		createResp, err := app.Test(createReq, 5000)
+		require.NoError(t, err)
+
+		var createResponse map[string]interface{}
+		err = json.NewDecoder(createResp.Body).Decode(&createResponse)
+		require.NoError(t, err)
+
+		deviceMap := createResponse["device"].(map[string]interface{})
+		deviceID := int(deviceMap["id"].(float64))
+
+		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/devices/%d", deviceID), nil)
+		deleteReq.Header.Set(GetAuthHeader())
+
+		deleteResp, err := app.Test(deleteReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+
+		var deleteResponse map[string]interface{}
+		err = json.NewDecoder(deleteResp.Body).Decode(&deleteResponse)
+		require.NoError(t, err)
+		assert.Equal(t, "Device deleted successfully", deleteResponse["message"])
+
+		getReq := httptest.NewRequest("GET", fmt.Sprintf("/devices/%d", deviceID), nil)
+		getReq.Header.Set(GetAuthHeader())
+
+		getResp, err := app.Test(getReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, getResp.StatusCode)
+	})
+
+	t.Run("Delete Non-existent Device", func(t *testing.T) {
+		app := testDB.CreateApp(t)
+
+		deleteReq := httptest.NewRequest("DELETE", "/devices/99999", nil)
+		deleteReq.Header.Set(GetAuthHeader())
+
+		deleteResp, err := app.Test(deleteReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+
+		var deleteResponse map[string]interface{}
+		err = json.NewDecoder(deleteResp.Body).Decode(&deleteResponse)
+		require.NoError(t, err)
+		assert.Equal(t, "Device deleted successfully", deleteResponse["message"])
+	})
+
+	t.Run("Delete Device with Invalid ID", func(t *testing.T) {
+		app := testDB.CreateApp(t)
+
+		deleteReq := httptest.NewRequest("DELETE", "/devices/invalid", nil)
+		deleteReq.Header.Set(GetAuthHeader())
+
+		deleteResp, err := app.Test(deleteReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, deleteResp.StatusCode)
+
+		var deleteResponse map[string]interface{}
+		err = json.NewDecoder(deleteResp.Body).Decode(&deleteResponse)
+		require.NoError(t, err)
+		assert.Equal(t, "Invalid device ID", deleteResponse["error"])
 	})
 }
 

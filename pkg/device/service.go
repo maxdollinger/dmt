@@ -61,3 +61,25 @@ func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(device)
 }
+
+func (s *DeviceService) DeleteDevice(c *fiber.Ctx) error {
+	idParam := c.Params("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid device ID",
+		})
+	}
+
+	device := &Device{ID: id}
+	err = DeleteDevice(c.Context(), s.db, device)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete device",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Device deleted successfully",
+	})
+}
