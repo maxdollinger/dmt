@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"dmt/config"
+	"dmt/internals/api"
 	"dmt/internals/middleware"
 	"log"
 
@@ -29,14 +30,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(middleware.KeyAuthMiddleware(apiKey))
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		var greeting string
-		err := conn.QueryRow(c.Context(), "select 'Hello, World!'").Scan(&greeting)
-		if err != nil {
-			return c.Status(500).SendString("Database error: " + err.Error())
-		}
-		return c.SendString(greeting)
-	})
+	helloService := api.NewHelloService(conn)
+
+	app.Get("/", helloService.Hello)
 
 	port := config.GetPort()
 	log.Fatal(app.Listen(":" + port))
