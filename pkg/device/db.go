@@ -8,10 +8,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (d *Device) Insert(ctx context.Context, db *pgx.Conn) error {
-	sanitizeDevice(d)
+func InsertDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
+	sanitizeDevice(device)
 
-	if validationErrors := validateDevice(d); len(validationErrors) > 0 {
+	if validationErrors := validateDevice(device); len(validationErrors) > 0 {
 		message := ""
 		for _, err := range validationErrors {
 			message += err.Error() + "; "
@@ -30,13 +30,13 @@ func (d *Device) Insert(ctx context.Context, db *pgx.Conn) error {
 	defer cancel()
 
 	err := db.QueryRow(ctx, query,
-		d.Name,
-		d.Type,
-		d.IP,
-		d.MAC,
-		d.Description,
-		d.Employee,
-	).Scan(&d.ID, &d.CreatedAt, &d.UpdatedAt)
+		device.Name,
+		device.Type,
+		device.IP,
+		device.MAC,
+		device.Description,
+		device.Employee,
+	).Scan(&device.ID, &device.CreatedAt, &device.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -44,10 +44,10 @@ func (d *Device) Insert(ctx context.Context, db *pgx.Conn) error {
 	return nil
 }
 
-func (d *Device) Update(ctx context.Context, db *pgx.Conn) error {
-	sanitizeDevice(d)
+func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
+	sanitizeDevice(device)
 
-	if validationErrors := validateDevice(d); len(validationErrors) > 0 {
+	if validationErrors := validateDevice(device); len(validationErrors) > 0 {
 		message := ""
 		for _, err := range validationErrors {
 			message += err.Error() + "; "
@@ -67,14 +67,14 @@ func (d *Device) Update(ctx context.Context, db *pgx.Conn) error {
 	defer cancel()
 
 	err := db.QueryRow(ctx, query,
-		d.Name,
-		d.Type,
-		d.IP,
-		d.MAC,
-		d.Description,
-		d.Employee,
-		d.ID,
-	).Scan(&d.UpdatedAt)
+		device.Name,
+		device.Type,
+		device.IP,
+		device.MAC,
+		device.Description,
+		device.Employee,
+		device.ID,
+	).Scan(&device.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -82,17 +82,16 @@ func (d *Device) Update(ctx context.Context, db *pgx.Conn) error {
 	return nil
 }
 
-func (d *Device) Delete(ctx context.Context, db *pgx.Conn) error {
+func DeleteDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 	query := `
 		DELETE FROM device 
 		WHERE id = $1 
-		RETURNING updated_at
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := db.QueryRow(ctx, query, d.ID).Scan(&d.UpdatedAt)
+	_, err := db.Exec(ctx, query, device.ID)
 	if err != nil {
 		return err
 	}
@@ -100,7 +99,7 @@ func (d *Device) Delete(ctx context.Context, db *pgx.Conn) error {
 	return nil
 }
 
-func (d *Device) GetByID(ctx context.Context, db *pgx.Conn) error {
+func GetDeviceByID(ctx context.Context, db *pgx.Conn, device *Device) error {
 	query := `
 		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee 
 		FROM device 
@@ -111,16 +110,16 @@ func (d *Device) GetByID(ctx context.Context, db *pgx.Conn) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := db.QueryRow(ctx, query, d.ID).Scan(
-		&d.ID,
-		&d.CreatedAt,
-		&d.UpdatedAt,
-		&d.Name,
-		&d.Type,
-		&d.IP,
-		&d.MAC,
-		&d.Description,
-		&d.Employee,
+	err := db.QueryRow(ctx, query, device.ID).Scan(
+		&device.ID,
+		&device.CreatedAt,
+		&device.UpdatedAt,
+		&device.Name,
+		&device.Type,
+		&device.IP,
+		&device.MAC,
+		&device.Description,
+		&device.Employee,
 	)
 	if err != nil {
 		return err

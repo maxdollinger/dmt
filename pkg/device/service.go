@@ -17,7 +17,6 @@ func NewDeviceService(db *pgx.Conn) *DeviceService {
 
 func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 	device := new(Device)
-	// Parse JSON body
 	err := c.BodyParser(&device)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -25,7 +24,7 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 		})
 	}
 
-	err = device.Insert(c.Context(), s.db)
+	err = InsertDevice(c.Context(), s.db, device)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create device",
@@ -39,7 +38,6 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 }
 
 func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
-	// Parse ID from URL parameter
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -48,9 +46,8 @@ func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create device instance with ID and fetch from database
 	device := &Device{ID: id}
-	err = device.GetByID(c.Context(), s.db)
+	err = GetDeviceByID(c.Context(), s.db, device)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
