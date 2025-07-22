@@ -1,6 +1,8 @@
 package device
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 )
@@ -11,15 +13,6 @@ type DeviceService struct {
 
 func NewDeviceService(db *pgx.Conn) *DeviceService {
 	return &DeviceService{db: db}
-}
-
-type CreateDeviceRequest struct {
-	Name        string  `json:"name"`
-	Type        string  `json:"type"`
-	IP          string  `json:"ip"`
-	MAC         string  `json:"mac"`
-	Description *string `json:"description,omitempty"`
-	Employee    *string `json:"employee,omitempty"`
 }
 
 func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
@@ -43,4 +36,31 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 		"message": "Device created successfully",
 		"device":  device,
 	})
+}
+
+func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
+	// Parse ID from URL parameter
+	idParam := c.Params("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid device ID",
+		})
+	}
+
+	// Create device instance with ID and fetch from database
+	device := &Device{ID: id}
+	err = device.GetByID(c.Context(), s.db)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Device not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve device",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(device)
 }

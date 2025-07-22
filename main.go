@@ -32,7 +32,8 @@ func main() {
 
 	deviceService := device.NewDeviceService(conn)
 
-	app.Post("/device", deviceService.CreateDevice)
+	app.Post("/devices", deviceService.CreateDevice)
+	app.Get("/devices/:id", deviceService.GetDevice)
 
 	port := config.GetPort()
 	log.Fatal(app.Listen(":" + port))
