@@ -5,6 +5,7 @@ import (
 	"dmt/internals"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -95,8 +96,8 @@ func (tc *TestContainer) ClearDB(t *testing.T) {
 	}
 }
 
-func GetAuthHeader() (string, string) {
-	return "Authorization", "Bearer " + encodedAPIKey
+func SetAuthHeader(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+encodedAPIKey)
 }
 
 func runMigrations(connectionString string) error {
