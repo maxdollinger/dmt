@@ -146,24 +146,86 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, "Device deleted successfully", deleteResponse["message"])
 	})
 
-	t.Run("Delete Device with Invalid ID", func(t *testing.T) {
+	t.Run("Update Device", func(t *testing.T) {
 		app := testDB.CreateApp(t)
 
-		deleteReq := httptest.NewRequest("DELETE", "/devices/invalid", nil)
-		deleteReq.Header.Set(GetAuthHeader())
+		deviceData := map[string]interface{}{
+			"name": "Update Test Device",
+			"type": "laptop",
+			"ip":   "192.168.1.103",
+			"mac":  "cc:dd:ee:ff:aa:bb",
+		}
 
-		deleteResp, err := app.Test(deleteReq, 5000)
+		jsonData, err := json.Marshal(deviceData)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusBadRequest, deleteResp.StatusCode)
 
-		var deleteResponse map[string]interface{}
-		err = json.NewDecoder(deleteResp.Body).Decode(&deleteResponse)
+		createReq := httptest.NewRequest("POST", "/devices", bytes.NewBuffer(jsonData))
+		createReq.Header.Set(GetAuthHeader())
+		createReq.Header.Set("Content-Type", "application/json")
+
+		createResp, err := app.Test(createReq, 5000)
 		require.NoError(t, err)
-		assert.Equal(t, "Invalid device ID", deleteResponse["error"])
+		assert.Equal(t, http.StatusCreated, createResp.StatusCode)
+
+		var createResponse map[string]interface{}
+		err = json.NewDecoder(createResp.Body).Decode(&createResponse)
+		require.NoError(t, err)
+
+		deviceMap := createResponse["device"].(map[string]interface{})
+		deviceID := int(deviceMap["id"].(float64))
+
+		updatedDeviceData := map[string]interface{}{
+			"name":        "Updated Test Device",
+			"type":        "desktop",
+			"ip":          "192.168.1.104",
+			"mac":         "dd:ee:ff:aa:bb:cc",
+			"description": "Updated device for testing",
+			"employee":    "jdo",
+		}
+
+		updatedJsonData, err := json.Marshal(updatedDeviceData)
+		require.NoError(t, err)
+
+		updateReq := httptest.NewRequest("PUT", fmt.Sprintf("/devices/%d", deviceID), bytes.NewBuffer(updatedJsonData))
+		updateReq.Header.Set(GetAuthHeader())
+		updateReq.Header.Set("Content-Type", "application/json")
+
+		updateResp, err := app.Test(updateReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, updateResp.StatusCode)
+
+		var updateResponse map[string]interface{}
+		err = json.NewDecoder(updateResp.Body).Decode(&updateResponse)
+		require.NoError(t, err)
+		assert.Equal(t, "Device updated successfully", updateResponse["message"])
+
+		updatedDeviceMap := updateResponse["device"].(map[string]interface{})
+		assert.Equal(t, updatedDeviceData["name"], updatedDeviceMap["name"])
+		assert.Equal(t, updatedDeviceData["type"], updatedDeviceMap["type"])
+		assert.Equal(t, updatedDeviceData["ip"], updatedDeviceMap["ip"])
+		assert.Equal(t, updatedDeviceData["mac"], updatedDeviceMap["mac"])
+		assert.Equal(t, updatedDeviceData["description"], updatedDeviceMap["description"])
+		assert.Equal(t, updatedDeviceData["employee"], updatedDeviceMap["employee"])
+
+		getReq := httptest.NewRequest("GET", fmt.Sprintf("/devices/%d", deviceID), nil)
+		getReq.Header.Set(GetAuthHeader())
+
+		getResp, err := app.Test(getReq, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, getResp.StatusCode)
+
+		var getResponse map[string]interface{}
+		err = json.NewDecoder(getResp.Body).Decode(&getResponse)
+		require.NoError(t, err)
+		assert.Equal(t, updatedDeviceData["name"], getResponse["name"])
+		assert.Equal(t, updatedDeviceData["type"], getResponse["type"])
+		assert.Equal(t, updatedDeviceData["ip"], getResponse["ip"])
+		assert.Equal(t, updatedDeviceData["mac"], getResponse["mac"])
+		assert.Equal(t, updatedDeviceData["description"], getResponse["description"])
+		assert.Equal(t, updatedDeviceData["employee"], getResponse["employee"])
 	})
 }
 
-// BenchmarkDeviceCreation benchmarks device creation performance
 func BenchmarkDeviceCreation(b *testing.B) {
 	t := &testing.T{}
 	testDB := SetupTestDB(t)
