@@ -79,6 +79,22 @@ func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgx.Conn) {
 	return app, db
 }
 
+func (tc *TestContainer) ClearDB(t *testing.T) {
+	ctx := context.Background()
+
+	conn, err := pgx.Connect(ctx, tc.ConnString)
+	if err != nil {
+		t.Fatalf("Failed to connect to database for cleanup: %v", err)
+	}
+	defer conn.Close(ctx)
+
+	// Truncate all tables to reset state
+	_, err = conn.Exec(ctx, "TRUNCATE TABLE device RESTART IDENTITY CASCADE")
+	if err != nil {
+		t.Fatalf("Failed to clear database: %v", err)
+	}
+}
+
 func GetAuthHeader() (string, string) {
 	return "Authorization", "Bearer " + encodedAPIKey
 }
