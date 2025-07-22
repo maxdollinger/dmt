@@ -1,6 +1,21 @@
-version: "3.8"
-
 services:
+  migrate:
+    image: migrate/migrate
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://user:password@postgres:5432/dmt?sslmode=disable",
+        "up",
+      ]
+    volumes:
+      - ./internals/migrations:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build: .
     ports:
@@ -12,6 +27,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   postgres:
@@ -33,4 +50,3 @@ services:
 
 volumes:
   postgres_data:
-

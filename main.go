@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"dmt/config"
-	"dmt/internals/api"
 	"dmt/internals/middleware"
+	"dmt/pkg/device"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,9 +30,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(middleware.KeyAuthMiddleware(apiKey))
 
-	helloService := api.NewHelloService(conn)
+	deviceService := device.NewDeviceService(conn)
 
-	app.Get("/", helloService.Hello)
+	app.Post("/device", deviceService.CreateDevice)
 
 	port := config.GetPort()
 	log.Fatal(app.Listen(":" + port))
