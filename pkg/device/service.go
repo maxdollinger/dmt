@@ -113,3 +113,22 @@ func (s *DeviceService) UpdateDevice(c *fiber.Ctx) error {
 		"device":  device,
 	})
 }
+
+func (s *DeviceService) GetDevices(c *fiber.Ctx) error {
+	employee := c.Query("employee")
+	deviceType := c.Query("type")
+	ip := c.Query("ip")
+	mac := c.Query("mac")
+
+	devices, err := GetDevices(c.Context(), s.db, employee, deviceType, ip, mac)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to retrieve devices",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"devices": devices,
+		"count":   len(devices),
+	})
+}

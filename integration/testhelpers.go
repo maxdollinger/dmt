@@ -69,14 +69,14 @@ func (tc *TestContainer) Cleanup(t *testing.T) {
 	}
 }
 
-func (tc *TestContainer) CreateApp(t *testing.T) *fiber.App {
+func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgx.Conn) {
 	ctx := context.Background()
 
 	db := internals.ConnectDb(ctx, tc.ConnString)
 
 	app := internals.CreateApp(db, testAPIKey)
 
-	return app
+	return app, db
 }
 
 func GetAuthHeader() (string, string) {

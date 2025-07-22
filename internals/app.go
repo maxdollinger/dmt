@@ -20,6 +20,7 @@ func CreateApp(db *pgx.Conn, apiKey string) *fiber.App {
 	deviceService := device.NewDeviceService(db)
 
 	app.Post("/devices", deviceService.CreateDevice)
+	app.Get("/devices", deviceService.GetDevices)
 	app.Get("/devices/:id", deviceService.GetDevice)
 	app.Put("/devices/:id", deviceService.UpdateDevice)
 	app.Delete("/devices/:id", deviceService.DeleteDevice)

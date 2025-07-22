@@ -127,3 +127,56 @@ func GetDeviceByID(ctx context.Context, db *pgx.Conn, device *Device) error {
 
 	return nil
 }
+
+func GetDevices(ctx context.Context, db *pgx.Conn, employee, deviceType, ip, mac string) ([]Device, error) {
+	query := `
+		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee 
+		FROM device 
+		WHERE 1=1
+	`
+
+	args := []interface{}{}
+	argIndex := 1
+
+	if employee != "" {
+		query += fmt.Sprintf(" AND employee = $%d", argIndex)
+		args = append(args, employee)
+		argIndex++
+	}
+
+	if deviceType != "" {
+		query += fmt.Sprintf(" AND type = $%d", argIndex)
+		args = append(args, deviceType)
+		argIndex++
+	}
+
+	if ip != "" {
+		query += fmt.Sprintf(" AND ip LIKE $%d", argIndex)
+		args = append(args, "%"+ip+"%")
+		argIndex++
+	}
+
+	if mac != "" {
+		query += fmt.Sprintf(" AND mac ILIKE $%d", argIndex)
+		args = append(args, "%"+mac+"%")
+		argIndex++
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	devices, err := pgx.CollectRows(rows, pgx.RowToStructByName[Device])
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return devices, nil
+}
