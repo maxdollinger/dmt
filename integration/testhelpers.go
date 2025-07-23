@@ -75,7 +75,7 @@ func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgx.Conn) {
 
 	db := internals.ConnectDb(ctx, tc.ConnString)
 
-	app := internals.CreateApp(db, testAPIKey)
+	app := internals.CreateHttpServer(db, testAPIKey)
 
 	return app, db
 }

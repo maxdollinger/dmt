@@ -19,8 +19,8 @@ func main() {
 
 	device.HandleDeviceCountNotifications(ctx, databaseURL, notificationUrl)
 
-	app := internals.CreateApp(db, apiKey)
+	server := internals.CreateHttpServer(db, apiKey)
 
 	port := config.GetPort()
-	log.Fatal(app.Listen(":" + port))
+	log.Fatal(server.Listen(":" + port))
 }

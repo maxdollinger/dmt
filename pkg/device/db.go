@@ -59,6 +59,10 @@ func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 	if device.Employee != nil {
 		employee := strings.TrimSpace(*device.Employee)
 		if employee != "" {
+			if err := validateEmployee(&employee); err != nil {
+				return err
+			}
+
 			args = append(args, employee)
 			sqlChunk = append(sqlChunk, fmt.Sprintf(" employee = $%d", len(args)))
 		} else {

@@ -45,100 +45,40 @@ func generateRandomMAC() string {
 		randSource.Intn(256))
 }
 
-type DeviceOption func(*deviceConfig)
-
-type deviceConfig struct {
-	name        string
-	deviceType  string
-	ip          string
-	mac         string
-	description string
-	employee    string
-}
+type DeviceOption func(*device.Device)
 
 func withName(name string) DeviceOption {
-	return func(c *deviceConfig) { c.name = name }
+	return func(d *device.Device) { d.Name = name }
 }
 
 func withType(deviceType string) DeviceOption {
-	return func(c *deviceConfig) { c.deviceType = deviceType }
+	return func(d *device.Device) { d.Type = deviceType }
 }
 
 func withIP(ip string) DeviceOption {
-	return func(c *deviceConfig) { c.ip = ip }
+	return func(d *device.Device) { d.IP = ip }
 }
 
 func withMAC(mac string) DeviceOption {
-	return func(c *deviceConfig) { c.mac = mac }
-}
-
-func withDescription(description string) DeviceOption {
-	return func(c *deviceConfig) { c.description = description }
+	return func(d *device.Device) { d.MAC = mac }
 }
 
 func withEmployee(employee string) DeviceOption {
-	return func(c *deviceConfig) { c.employee = employee }
-}
-
-func createTestDeviceData(opts ...DeviceOption) map[string]interface{} {
-	config := applyDeviceOptions(opts...)
-
-	data := map[string]interface{}{
-		"name": config.name,
-		"type": config.deviceType,
-		"ip":   config.ip,
-		"mac":  config.mac,
-	}
-
-	if config.description != "" {
-		data["description"] = config.description
-	}
-
-	if config.employee != "" {
-		data["employee"] = config.employee
-	}
-
-	return data
+	return func(d *device.Device) { d.Employee = &employee }
 }
 
 func createTestDevice(opts ...DeviceOption) *device.Device {
-	config := applyDeviceOptions(opts...)
-
-	var description *string
-	if config.description != "" {
-		description = &config.description
+	device := &device.Device{
+		Name: "Test Device",
+		Type: "laptop",
+		IP:   generateRandomIP(),
+		MAC:  generateRandomMAC(),
 	}
-
-	var employee *string
-	if config.employee != "" {
-		employee = &config.employee
-	}
-
-	return &device.Device{
-		Name:        config.name,
-		Type:        config.deviceType,
-		IP:          config.ip,
-		MAC:         config.mac,
-		Description: description,
-		Employee:    employee,
-	}
-}
-
-func applyDeviceOptions(opts ...DeviceOption) *deviceConfig {
-	deviceNum := getNextDeviceNumber()
-
-	config := &deviceConfig{
-		name:       fmt.Sprintf("Test Device %d", deviceNum),
-		deviceType: "laptop",
-		ip:         generateRandomIP(),
-		mac:        generateRandomMAC(),
-	}
-
 	for _, opt := range opts {
-		opt(config)
+		opt(device)
 	}
 
-	return config
+	return device
 }
 
 func createTestDevicesForEmployee(count int, employee string, baseOpts ...DeviceOption) []*device.Device {
@@ -147,7 +87,6 @@ func createTestDevicesForEmployee(count int, employee string, baseOpts ...Device
 	for i := 0; i < count; i++ {
 		opts := []DeviceOption{
 			withEmployee(employee),
-			withDescription(fmt.Sprintf("Test device %d for %s", i+1, employee)),
 		}
 
 		allOpts := append(opts, baseOpts...)

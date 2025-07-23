@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func CreateApp(db *pgx.Conn, apiKey string) *fiber.App {
+func CreateHttpServer(db *pgx.Conn, apiKey string) *fiber.App {
 	app := fiber.New()
 
 	app.Use(logger.New())
@@ -24,10 +24,10 @@ func CreateApp(db *pgx.Conn, apiKey string) *fiber.App {
 
 	v1.Post("/devices", deviceHandler.CreateDevice)
 	v1.Get("/devices", deviceHandler.GetDevices)
-	v1.Get("/devices/:id", deviceHandler.GetDevice)
+	v1.Get("/devices/:id", deviceHandler.GetDeviceByID)
+	v1.Delete("/devices/:id", deviceHandler.DeleteDevice)
 	v1.Put("/devices/:id/employee", deviceHandler.UpdateDeviceEmployee)
 	v1.Delete("/devices/:id/employee", deviceHandler.DeleteDeviceEmployee)
-	v1.Delete("/devices/:id", deviceHandler.DeleteDevice)
 
 	return app
 }

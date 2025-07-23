@@ -20,6 +20,7 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 	device := new(Device)
 	err := c.BodyParser(&device)
 	if err != nil {
+		log.Errorf("Failed to parse device: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid JSON format",
 		})
@@ -27,6 +28,7 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 
 	err = InsertDevice(c.Context(), s.db, device)
 	if err != nil {
+		log.Errorf("Failed to create device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to create device",
 			"message": err.Error(),
@@ -39,7 +41,7 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 	})
 }
 
-func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
+func (s *DeviceService) GetDeviceByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {

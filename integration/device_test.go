@@ -23,7 +23,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		deviceData := createTestDeviceData()
+		deviceData := createTestDevice()
 
 		jsonData, err := json.Marshal(deviceData)
 		require.NoError(t, err)
@@ -42,10 +42,10 @@ func TestDeviceAPI(t *testing.T) {
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
 
-		assert.Equal(t, deviceData["name"], dbDevice.Name)
-		assert.Equal(t, deviceData["type"], dbDevice.Type)
-		assert.Equal(t, deviceData["ip"], dbDevice.IP)
-		assert.Equal(t, deviceData["mac"], dbDevice.MAC)
+		assert.Equal(t, deviceData.Name, dbDevice.Name)
+		assert.Equal(t, deviceData.Type, dbDevice.Type)
+		assert.Equal(t, deviceData.IP, dbDevice.IP)
+		assert.Equal(t, deviceData.MAC, dbDevice.MAC)
 	})
 
 	t.Run("Get Non-existent Device", func(t *testing.T) {
@@ -264,7 +264,7 @@ func BenchmarkDeviceCreation(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		deviceData := createTestDeviceData()
+		deviceData := createTestDevice()
 
 		jsonData, _ := json.Marshal(deviceData)
 		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
