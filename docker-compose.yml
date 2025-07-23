@@ -16,6 +16,19 @@ services:
         condition: service_healthy
     restart: "no"
 
+  notification-service:
+    image: greenbone/exercise-admin-notification
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   app:
     build: .
     ports:
@@ -29,6 +42,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      notification-service:
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
