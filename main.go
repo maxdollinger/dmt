@@ -4,6 +4,7 @@ import (
 	"context"
 	"dmt/internals"
 	"dmt/internals/config"
+	"dmt/pkg/device"
 	"log"
 )
 
@@ -14,6 +15,14 @@ func main() {
 	ctx := context.Background()
 	db := internals.ConnectDb(ctx, databaseURL)
 	defer db.Close(ctx)
+
+	notificationChan := device.NotifyDeviceCount(ctx, databaseURL)
+	go func() {
+		for notification := range notificationChan {
+			log.Printf("Device count alert: Employee %s has %d devices",
+				notification.Employee, notification.Count)
+		}
+	}()
 
 	app := internals.CreateApp(db, apiKey)
 
