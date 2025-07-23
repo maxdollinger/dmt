@@ -11,7 +11,9 @@ import (
 )
 
 func CreateHttpServer(db *pgxpool.Pool, apiKey string) *fiber.App {
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 512,
+	})
 
 	app.Use(logger.New())
 	app.Use(recover.New())
