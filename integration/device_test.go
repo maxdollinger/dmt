@@ -24,12 +24,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		deviceData := map[string]interface{}{
-			"name": "Get Test Device",
-			"type": "phone",
-			"ip":   "192.168.1.101",
-			"mac":  "bb:cc:dd:ee:ff:aa",
-		}
+		deviceData := createTestDeviceData()
 
 		jsonData, err := json.Marshal(deviceData)
 		require.NoError(t, err)
@@ -77,12 +72,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		testDevice := &device.Device{
-			Name: "Delete Test Device",
-			Type: "tablet",
-			IP:   "192.168.1.102",
-			MAC:  "aa:bb:cc:dd:ee:ff",
-		}
+		testDevice := createTestDevice()
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
@@ -114,18 +104,14 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		testDevice := &device.Device{
-			Name: "Employee Update Test Device",
-			Type: "laptop",
-			IP:   "192.168.1.103",
-			MAC:  "cc:dd:ee:ff:aa:bb",
-		}
+		testDevice := createTestDevice(&DeviceTestOptions{
+			Employee: "jsm",
+		})
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		// Test updating employee
 		employeeData := map[string]interface{}{
 			"employee": "jdo",
 		}
@@ -140,12 +126,10 @@ func TestDeviceAPI(t *testing.T) {
 		var updateResponse map[string]interface{}
 		makeRequest(t, app, updateReq, http.StatusOK, &updateResponse)
 
-		// Verify employee was updated
 		dbDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
 		assert.Equal(t, employeeData["employee"], *dbDevice.Employee)
-		// Verify other fields weren't changed
 		assert.Equal(t, testDevice.Name, dbDevice.Name)
 		assert.Equal(t, testDevice.Type, dbDevice.Type)
 		assert.Equal(t, testDevice.IP, dbDevice.IP)
@@ -156,31 +140,24 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		testDevice := &device.Device{
-			Name:     "Employee Remove Test Device",
-			Type:     "tablet",
-			IP:       "192.168.1.104",
-			MAC:      "dd:ee:ff:aa:bb:cc",
-			Employee: stringPtr("jdo"),
-		}
+		testDevice := createTestDevice(&DeviceTestOptions{
+			Employee: "jdo",
+		})
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		// Test removing employee
 		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), nil)
 		SetAuthHeader(deleteReq)
 
 		var deleteResponse map[string]interface{}
 		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
 
-		// Verify employee was removed
 		dbDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
 		assert.Nil(t, dbDevice.Employee, "Expected device to have no employee but employee field is not nil")
-		// Verify other fields weren't changed
 		assert.Equal(t, testDevice.Name, dbDevice.Name)
 		assert.Equal(t, testDevice.Type, dbDevice.Type)
 		assert.Equal(t, testDevice.IP, dbDevice.IP)
@@ -192,30 +169,30 @@ func TestDeviceAPI(t *testing.T) {
 		app, db := testDB.CreateApp(t)
 
 		testDevices := []*device.Device{
-			{
+			createTestDevice(&DeviceTestOptions{
 				Name:        "Device 1",
 				Type:        "laptop",
 				IP:          "192.168.1.100",
 				MAC:         "aa:bb:cc:dd:ee:ff",
-				Description: stringPtr("Test laptop"),
-				Employee:    stringPtr("jdo"),
-			},
-			{
+				Description: "Test laptop",
+				Employee:    "jdo",
+			}),
+			createTestDevice(&DeviceTestOptions{
 				Name:        "Device 2",
 				Type:        "phone",
 				IP:          "192.168.2.100",
 				MAC:         "bb:cc:dd:ee:ff:aa",
-				Description: stringPtr("Test phone"),
-				Employee:    stringPtr("jsm"),
-			},
-			{
+				Description: "Test phone",
+				Employee:    "jsm",
+			}),
+			createTestDevice(&DeviceTestOptions{
 				Name:        "Device 3",
 				Type:        "laptop",
 				IP:          "10.0.1.100",
 				MAC:         "cc:dd:ee:ff:aa:bb",
-				Description: stringPtr("Another laptop"),
-				Employee:    stringPtr("jdo"),
-			},
+				Description: "Another laptop",
+				Employee:    "jdo",
+			}),
 		}
 
 		for _, testDevice := range testDevices {
@@ -289,6 +266,103 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+type DeviceTestOptions struct {
+	Name        string
+	Type        string
+	IP          string
+	MAC         string
+	Description string // Will be converted to *string internally
+	Employee    string // Will be converted to *string internally
+	IPSuffix    int    // For generating unique IPs like 192.168.1.{IPSuffix}
+}
+
+func createTestDeviceData(opts ...*DeviceTestOptions) map[string]interface{} {
+	options := getDeviceOptions(opts...)
+
+	data := map[string]interface{}{
+		"name": options.Name,
+		"type": options.Type,
+		"ip":   options.IP,
+		"mac":  options.MAC,
+	}
+
+	if options.Description != "" {
+		data["description"] = options.Description
+	}
+
+	if options.Employee != "" {
+		data["employee"] = options.Employee
+	}
+
+	return data
+}
+
+func createTestDevice(opts ...*DeviceTestOptions) *device.Device {
+	options := getDeviceOptions(opts...)
+
+	var description *string
+	if options.Description != "" {
+		description = &options.Description
+	}
+
+	var employee *string
+	if options.Employee != "" {
+		employee = &options.Employee
+	}
+
+	return &device.Device{
+		Name:        options.Name,
+		Type:        options.Type,
+		IP:          options.IP,
+		MAC:         options.MAC,
+		Description: description,
+		Employee:    employee,
+	}
+}
+
+func getDeviceOptions(opts ...*DeviceTestOptions) *DeviceTestOptions {
+	options := &DeviceTestOptions{
+		Name:     "Test Device",
+		Type:     "laptop",
+		IP:       "192.168.1.100",
+		MAC:      "aa:bb:cc:dd:ee:ff",
+		IPSuffix: 100,
+	}
+
+	if len(opts) > 0 && opts[0] != nil {
+		userOpts := opts[0]
+		if userOpts.Name != "" {
+			options.Name = userOpts.Name
+		}
+		if userOpts.Type != "" {
+			options.Type = userOpts.Type
+		}
+		if userOpts.IP != "" {
+			options.IP = userOpts.IP
+		} else if userOpts.IPSuffix != 0 {
+			options.IP = fmt.Sprintf("192.168.1.%d", userOpts.IPSuffix)
+		}
+		if userOpts.MAC != "" {
+			options.MAC = userOpts.MAC
+		}
+		if userOpts.Description != "" {
+			options.Description = userOpts.Description
+		}
+		if userOpts.Employee != "" {
+			options.Employee = userOpts.Employee
+		}
+		if userOpts.IPSuffix != 0 {
+			options.IPSuffix = userOpts.IPSuffix
+		}
+	}
+
+	return options
+}
+
+func generateUniqueMAC(index int) string {
+	return fmt.Sprintf("%02x:bb:cc:dd:ee:%02x", index%256, (index/256)%256)
+}
+
 func BenchmarkDeviceCreation(b *testing.B) {
 	t := &testing.T{}
 	testDB := SetupTestDB(t)
@@ -300,12 +374,12 @@ func BenchmarkDeviceCreation(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		deviceData := map[string]interface{}{
-			"name": "Benchmark Device " + strconv.Itoa(i),
-			"type": "laptop",
-			"ip":   "192.168.1." + strconv.Itoa(100+i%50),
-			"mac":  fmt.Sprintf("BB:BB:CC:DD:EE:%02X", i%256),
-		}
+		deviceData := createTestDeviceData(&DeviceTestOptions{
+			Name:     "Benchmark Device " + strconv.Itoa(i),
+			Type:     "laptop",
+			IPSuffix: 100 + i%50,
+			MAC:      generateUniqueMAC(i),
+		})
 
 		jsonData, _ := json.Marshal(deviceData)
 		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
