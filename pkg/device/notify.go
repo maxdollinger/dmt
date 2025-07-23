@@ -1,8 +1,11 @@
 package device
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -14,11 +17,49 @@ type Notification struct {
 	Count    int    `json:"count"`
 }
 
-// NotifyDeviceCount listens for PostgreSQL notifications on the device_count channel
+type NotificationRequest struct {
+	Level                string `json:"level"`
+	EmployeeAbbreviation string `json:"employeeAbbreviation"`
+	Message              string `json:"message"`
+}
+
+func SendNotification(notificationUrl string, notification *Notification) {
+	notificationReq := NotificationRequest{
+		Level:                "warning",
+		EmployeeAbbreviation: notification.Employee,
+		Message:              fmt.Sprintf("Device count warning: Employee %s has %d devices", notification.Employee, notification.Count),
+	}
+
+	jsonData, err := json.Marshal(notificationReq)
+	if err != nil {
+		log.Errorf("failed to marshal notification request: %w", err)
+		return
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Post(notificationUrl, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Errorf("failed to send notification: %w", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Errorf("notification service returned status code: %d", resp.StatusCode)
+		return
+	}
+
+	log.Infof("Successfully sent notification - Message: %s", notificationReq.Message)
+}
+
+// DeviceCountListener listens for PostgreSQL notifications on the device_count channel
 // and returns a channel that emits parsed Notification structs.
 // The function will run until the context is cancelled or an unrecoverable error occurs.
-func NotifyDeviceCount(ctx context.Context, url string) <-chan Notification {
-	notificationChan := make(chan Notification, 10) // Buffered to avoid blocking
+func DeviceCountListener(ctx context.Context, url string) <-chan Notification {
+	notificationChan := make(chan Notification, 10)
 
 	go func() {
 		defer close(notificationChan)
@@ -47,15 +88,9 @@ func NotifyDeviceCount(ctx context.Context, url string) <-chan Notification {
 				log.Info("Stopping device count notification listener")
 				return
 			default:
-				// Set a timeout for waiting for notifications to allow context checking
-				notifyCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-				pgNotification, err := conn.WaitForNotification(notifyCtx)
-				cancel()
-
+				pgNotification, err := conn.WaitForNotification(ctx)
 				if err != nil {
-					if ctx.Err() != nil {
-						return
-					}
+					log.Errorf("Failed to wait for notification: %v", err)
 					continue
 				}
 
@@ -67,7 +102,9 @@ func NotifyDeviceCount(ctx context.Context, url string) <-chan Notification {
 
 				log.Infof("Received device count notification - Employee: %s, Count: %d", deviceNotification.Employee, deviceNotification.Count)
 
-				notificationChan <- deviceNotification
+				if deviceNotification.Count >= 3 {
+					notificationChan <- deviceNotification
+				}
 			}
 		}
 	}()

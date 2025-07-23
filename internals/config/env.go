@@ -34,3 +34,8 @@ func GetDatabaseURL() string {
 	}
 	return dbURL
 }
+
+func GetNotifyUrl() string {
+	notifyURL := os.Getenv("NOTIFY_URL")
+	return notifyURL
+}

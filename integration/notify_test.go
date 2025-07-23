@@ -20,7 +20,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.NotifyDeviceCount(ctx, testDB.ConnString)
+		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -107,7 +107,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.NotifyDeviceCount(ctx, testDB.ConnString)
+		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -156,7 +156,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.NotifyDeviceCount(ctx, testDB.ConnString)
+		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
 
 		time.Sleep(100 * time.Millisecond)
 

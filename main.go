@@ -11,16 +11,16 @@ import (
 func main() {
 	apiKey := config.GetAPIKey()
 	databaseURL := config.GetDatabaseURL()
+	notificationUrl := config.GetNotifyUrl()
 
 	ctx := context.Background()
 	db := internals.ConnectDb(ctx, databaseURL)
 	defer db.Close(ctx)
 
-	notificationChan := device.NotifyDeviceCount(ctx, databaseURL)
+	notificationChan := device.DeviceCountListener(ctx, databaseURL)
 	go func() {
 		for notification := range notificationChan {
-			log.Printf("Device count alert: Employee %s has %d devices",
-				notification.Employee, notification.Count)
+			device.SendNotification(notificationUrl, &notification)
 		}
 	}()
 
