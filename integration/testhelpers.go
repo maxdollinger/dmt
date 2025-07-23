@@ -89,7 +89,6 @@ func (tc *TestContainer) ClearDB(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
-	// Truncate all tables to reset state
 	_, err = conn.Exec(ctx, "TRUNCATE TABLE device RESTART IDENTITY CASCADE")
 	if err != nil {
 		t.Fatalf("Failed to clear database: %v", err)

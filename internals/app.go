@@ -17,7 +17,6 @@ func CreateApp(db *pgx.Conn, apiKey string) *fiber.App {
 	app.Use(recover.New())
 	app.Use(middleware.KeyAuthMiddleware(apiKey))
 
-	// Mount v1 API routes
 	v1Router := api.CreateV1Router(db)
 	app.Mount("/api/v1", v1Router)
 

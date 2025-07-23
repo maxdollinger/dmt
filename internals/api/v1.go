@@ -8,17 +8,16 @@ import (
 )
 
 func CreateV1Router(db *pgx.Conn) *fiber.App {
-	v1 := fiber.New()
+	v1Router := fiber.New()
 
 	deviceService := device.NewDeviceService(db)
 
-	// Device routes
-	v1.Post("/devices", deviceService.CreateDevice)
-	v1.Get("/devices", deviceService.GetDevices)
-	v1.Get("/devices/:id", deviceService.GetDevice)
-	v1.Put("/devices/:id/employee", deviceService.UpdateDeviceEmployee)
-	v1.Delete("/devices/:id/employee", deviceService.DeleteDeviceEmployee)
-	v1.Delete("/devices/:id", deviceService.DeleteDevice)
+	v1Router.Post("/devices", deviceService.CreateDevice)
+	v1Router.Get("/devices", deviceService.GetDevices)
+	v1Router.Get("/devices/:id", deviceService.GetDevice)
+	v1Router.Put("/devices/:id/employee", deviceService.UpdateDeviceEmployee)
+	v1Router.Delete("/devices/:id/employee", deviceService.DeleteDeviceEmployee)
+	v1Router.Delete("/devices/:id", deviceService.DeleteDevice)
 
-	return v1
+	return v1Router
 }
