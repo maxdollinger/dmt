@@ -1,7 +1,7 @@
-package internals
+package internal
 
 import (
-	"dmt/internals/middleware"
+	"dmt/internal/middleware"
 	"dmt/pkg/device"
 
 	"github.com/gofiber/fiber/v2"

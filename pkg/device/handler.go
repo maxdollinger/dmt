@@ -31,8 +31,7 @@ func (s *DeviceHandler) CreateDevice(c *fiber.Ctx) error {
 	if err != nil {
 		log.Errorf("Failed to create device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to create device",
-			"message": err.Error(),
+			"error": "Failed to create device",
 		})
 	}
 
@@ -84,8 +83,7 @@ func (s *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
 	if err != nil {
 		log.Errorf("Failed to delete device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to delete device",
-			"message": err.Error(),
+			"error": "Failed to delete device",
 		})
 	}
 
@@ -120,8 +118,7 @@ func (s *DeviceHandler) UpdateDeviceEmployee(c *fiber.Ctx) error {
 	if err != nil {
 		log.Errorf("Failed to update device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to update device employee",
-			"message": err.Error(),
+			"error": "Failed to update device employee",
 		})
 	}
 
@@ -147,8 +144,7 @@ func (s *DeviceHandler) DeleteDeviceEmployee(c *fiber.Ctx) error {
 	if err != nil {
 		log.Errorf("Failed to remove device employee: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to remove device employee",
-			"message": err.Error(),
+			"error": "Failed to remove device employee",
 		})
 	}
 

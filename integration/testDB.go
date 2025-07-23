@@ -2,7 +2,7 @@ package integration
 
 import (
 	"context"
-	"dmt/internals"
+	"dmt/internal"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -74,9 +74,12 @@ func (tc *TestContainer) Cleanup(t *testing.T) {
 func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgxpool.Pool) {
 	ctx := context.Background()
 
-	db := internals.ConnectDb(ctx, tc.ConnString)
+	db, err := internal.ConnectDb(ctx, tc.ConnString)
+	if err != nil {
+		t.Fatalf("Failed to connect to test database: %v", err)
+	}
 
-	app := internals.CreateHttpServer(db, testAPIKey)
+	app := internal.CreateHttpServer(db, testAPIKey)
 
 	return app, db
 }
@@ -109,7 +112,7 @@ func runMigrations(connectionString string) error {
 	}
 	defer conn.Close(ctx)
 
-	migrationsPath := "../internals/migrations"
+	migrationsPath := "../internal/migrations"
 	migrations, err := readMigrationFiles(migrationsPath)
 	if err != nil {
 		return fmt.Errorf("failed to read migrations: %w", err)

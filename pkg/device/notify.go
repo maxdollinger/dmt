@@ -24,18 +24,30 @@ type NotificationRequest struct {
 	Message              string `json:"message"`
 }
 
-func HandleDeviceCountNotifications(ctx context.Context, db *pgxpool.Pool, notificationUrl string) {
+func HandleDeviceCountNotifications(ctx context.Context, db *pgxpool.Pool, notificationUrl string) error {
 	conn, err := db.Acquire(ctx)
 	if err != nil {
-		log.Fatalf("Failed to acquire connection from pool: %s", err.Error())
+		return fmt.Errorf("failed to acquire connection from pool: %w", err)
 	}
 
-	notificationChan := DeviceCountListener(ctx, conn.Conn())
+	notificationChan, err := DeviceCountListener(ctx, conn.Conn())
+	if err != nil {
+		conn.Release()
+		return fmt.Errorf("failed to start device count listener: %w", err)
+	}
+
 	go func() {
+		defer conn.Release()
+		defer log.Info("Notification handler stopped")
+
 		for notification := range notificationChan {
-			SendNotification(notificationUrl, &notification)
+			if notificationUrl != "" {
+				SendNotification(notificationUrl, &notification)
+			}
 		}
 	}()
+
+	return nil
 }
 
 func SendNotification(notificationUrl string, notification *Notification) {
@@ -47,7 +59,7 @@ func SendNotification(notificationUrl string, notification *Notification) {
 
 	jsonData, err := json.Marshal(notificationReq)
 	if err != nil {
-		log.Errorf("failed to marshal notification request: %w", err)
+		log.Errorf("failed to marshal notification request: %v", err)
 		return
 	}
 
@@ -57,7 +69,7 @@ func SendNotification(notificationUrl string, notification *Notification) {
 
 	resp, err := client.Post(notificationUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Errorf("failed to send notification: %w", err)
+		log.Errorf("failed to send notification: %v", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -70,16 +82,18 @@ func SendNotification(notificationUrl string, notification *Notification) {
 	log.Infof("Successfully sent notification - Message: %s", notificationReq.Message)
 }
 
-func DeviceCountListener(ctx context.Context, conn *pgx.Conn) <-chan Notification {
+func DeviceCountListener(ctx context.Context, conn *pgx.Conn) (<-chan Notification, error) {
 	notificationChan := make(chan Notification, 10)
+
+	_, err := conn.Exec(ctx, "LISTEN device_count")
+	if err != nil {
+		close(notificationChan)
+		return nil, fmt.Errorf("failed to listen for device count notifications: %w", err)
+	}
 
 	go func() {
 		defer close(notificationChan)
-
-		_, err := conn.Exec(ctx, "LISTEN device_count")
-		if err != nil {
-			log.Fatalf("Failed to listen for device count notifications: %s", err)
-		}
+		defer log.Info("Device count listener stopped")
 
 		log.Info("Started listening for device count notifications")
 
@@ -91,6 +105,9 @@ func DeviceCountListener(ctx context.Context, conn *pgx.Conn) <-chan Notificatio
 			default:
 				pgNotification, err := conn.WaitForNotification(ctx)
 				if err != nil {
+					if ctx.Err() != nil {
+						return
+					}
 					log.Errorf("Failed to wait for notification: %v", err)
 					continue
 				}
@@ -104,11 +121,15 @@ func DeviceCountListener(ctx context.Context, conn *pgx.Conn) <-chan Notificatio
 				log.Infof("Received device count notification - Employee: %s, Count: %d", deviceNotification.Employee, deviceNotification.Count)
 
 				if deviceNotification.Count >= 3 {
-					notificationChan <- deviceNotification
+					select {
+					case notificationChan <- deviceNotification:
+					case <-ctx.Done():
+						return
+					}
 				}
 			}
 		}
 	}()
 
-	return notificationChan
+	return notificationChan, nil
 }

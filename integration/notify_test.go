@@ -24,7 +24,8 @@ func TestNotifyDeviceCount(t *testing.T) {
 		conn, err := db.Acquire(ctx)
 		assert.NoError(t, err)
 
-		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
+		notificationChan, err := device.DeviceCountListener(ctx, conn.Conn())
+		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -83,7 +84,8 @@ func TestNotifyDeviceCount(t *testing.T) {
 		conn, err := db.Acquire(ctx)
 		assert.NoError(t, err)
 
-		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
+		notificationChan, err := device.DeviceCountListener(ctx, conn.Conn())
+		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -126,7 +128,8 @@ func TestNotifyDeviceCount(t *testing.T) {
 		conn, err := db.Acquire(ctx)
 		assert.NoError(t, err)
 
-		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
+		notificationChan, err := device.DeviceCountListener(ctx, conn.Conn())
+		assert.NoError(t, err)
 
 		time.Sleep(100 * time.Millisecond)
 

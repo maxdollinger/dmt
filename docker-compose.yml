@@ -10,7 +10,7 @@ services:
         "up",
       ]
     volumes:
-      - ./internals/migrations:/migrations
+      - ./internal/migrations:/migrations
     depends_on:
       postgres:
         condition: service_healthy

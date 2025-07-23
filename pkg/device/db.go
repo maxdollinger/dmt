@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -86,11 +85,10 @@ func UpdateDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 		}
 	}
 
-	fmt.Fprintf(&strBuilder, " WHERE id = %d RETURNING id, created_at, updated_at, name, type, ip, mac, description, employee", device.ID)
+	args = append(args, device.ID)
+	fmt.Fprintf(&strBuilder, " WHERE id = $%d RETURNING id, created_at, updated_at, name, type, ip, mac, description, employee", len(args))
 
 	query := strBuilder.String()
-
-	log.Infof("Executing query: %s", query)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
