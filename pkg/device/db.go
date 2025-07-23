@@ -17,7 +17,7 @@ func InsertDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 			message += err.Error() + "; "
 		}
 
-		return fmt.Errorf("Validation failed: %s", message)
+		return fmt.Errorf("validation failed: %s", message)
 	}
 
 	query := `
@@ -53,7 +53,7 @@ func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 			message += err.Error() + "; "
 		}
 
-		return fmt.Errorf("Validation failed: %s", message)
+		return fmt.Errorf("validation failed: %s", message)
 	}
 
 	query := `

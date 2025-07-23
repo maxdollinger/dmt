@@ -34,7 +34,7 @@ func TestDeviceAPI(t *testing.T) {
 		jsonData, err := json.Marshal(deviceData)
 		require.NoError(t, err)
 
-		req := httptest.NewRequest("POST", "/devices", bytes.NewBuffer(jsonData))
+		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
 		SetAuthHeader(req)
 		req.Header.Set("Content-Type", "application/json")
 
@@ -58,7 +58,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, _ := testDB.CreateApp(t)
 
-		req := httptest.NewRequest("GET", "/devices/99999", nil)
+		req := httptest.NewRequest("GET", "/api/v1/devices/99999", nil)
 		SetAuthHeader(req)
 
 		makeRequest(t, app, req, http.StatusNotFound, nil)
@@ -68,7 +68,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, _ := testDB.CreateApp(t)
 
-		req := httptest.NewRequest("GET", "/devices/1", nil)
+		req := httptest.NewRequest("GET", "/api/v1/devices/1", nil)
 
 		makeRequest(t, app, req, http.StatusUnauthorized, nil)
 	})
@@ -88,7 +88,7 @@ func TestDeviceAPI(t *testing.T) {
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/devices/%d", testDevice.ID), nil)
+		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/devices/%d", testDevice.ID), nil)
 		SetAuthHeader(deleteReq)
 
 		var deleteResponse map[string]interface{}
@@ -103,19 +103,19 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, _ := testDB.CreateApp(t)
 
-		deleteReq := httptest.NewRequest("DELETE", "/devices/99999", nil)
+		deleteReq := httptest.NewRequest("DELETE", "/api/v1/devices/99999", nil)
 		SetAuthHeader(deleteReq)
 
 		var deleteResponse map[string]interface{}
 		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
 	})
 
-	t.Run("Update Device", func(t *testing.T) {
+	t.Run("Update Device Employee", func(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
 		testDevice := &device.Device{
-			Name: "Update Test Device",
+			Name: "Employee Update Test Device",
 			Type: "laptop",
 			IP:   "192.168.1.103",
 			MAC:  "cc:dd:ee:ff:aa:bb",
@@ -125,34 +125,66 @@ func TestDeviceAPI(t *testing.T) {
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		updatedDeviceData := map[string]interface{}{
-			"name":        "Updated Test Device",
-			"type":        "desktop",
-			"ip":          "192.168.1.104",
-			"mac":         "dd:ee:ff:aa:bb:cc",
-			"description": "Updated device for testing",
-			"employee":    "jdo",
+		// Test updating employee
+		employeeData := map[string]interface{}{
+			"employee": "jdo",
 		}
 
-		updatedJsonData, err := json.Marshal(updatedDeviceData)
+		employeeJsonData, err := json.Marshal(employeeData)
 		require.NoError(t, err)
 
-		updateReq := httptest.NewRequest("PUT", fmt.Sprintf("/devices/%d", testDevice.ID), bytes.NewBuffer(updatedJsonData))
+		updateReq := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), bytes.NewBuffer(employeeJsonData))
 		SetAuthHeader(updateReq)
 		updateReq.Header.Set("Content-Type", "application/json")
 
 		var updateResponse map[string]interface{}
 		makeRequest(t, app, updateReq, http.StatusOK, &updateResponse)
 
+		// Verify employee was updated
 		dbDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
-		assert.Equal(t, updatedDeviceData["name"], dbDevice.Name)
-		assert.Equal(t, updatedDeviceData["type"], dbDevice.Type)
-		assert.Equal(t, updatedDeviceData["ip"], dbDevice.IP)
-		assert.Equal(t, updatedDeviceData["mac"], dbDevice.MAC)
-		assert.Equal(t, updatedDeviceData["description"], *dbDevice.Description)
-		assert.Equal(t, updatedDeviceData["employee"], *dbDevice.Employee)
+		assert.Equal(t, employeeData["employee"], *dbDevice.Employee)
+		// Verify other fields weren't changed
+		assert.Equal(t, testDevice.Name, dbDevice.Name)
+		assert.Equal(t, testDevice.Type, dbDevice.Type)
+		assert.Equal(t, testDevice.IP, dbDevice.IP)
+		assert.Equal(t, testDevice.MAC, dbDevice.MAC)
+	})
+
+	t.Run("Remove Device Employee", func(t *testing.T) {
+		defer testDB.ClearDB(t)
+		app, db := testDB.CreateApp(t)
+
+		testDevice := &device.Device{
+			Name:     "Employee Remove Test Device",
+			Type:     "tablet",
+			IP:       "192.168.1.104",
+			MAC:      "dd:ee:ff:aa:bb:cc",
+			Employee: stringPtr("jdo"),
+		}
+
+		err := device.InsertDevice(context.Background(), db, testDevice)
+		require.NoError(t, err)
+		require.NotZero(t, testDevice.ID)
+
+		// Test removing employee
+		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), nil)
+		SetAuthHeader(deleteReq)
+
+		var deleteResponse map[string]interface{}
+		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
+
+		// Verify employee was removed
+		dbDevice := &device.Device{ID: testDevice.ID}
+		err = device.GetDeviceByID(context.Background(), db, dbDevice)
+		require.NoError(t, err)
+		assert.Nil(t, dbDevice.Employee, "Expected device to have no employee but employee field is not nil")
+		// Verify other fields weren't changed
+		assert.Equal(t, testDevice.Name, dbDevice.Name)
+		assert.Equal(t, testDevice.Type, dbDevice.Type)
+		assert.Equal(t, testDevice.IP, dbDevice.IP)
+		assert.Equal(t, testDevice.MAC, dbDevice.MAC)
 	})
 
 	t.Run("Get Devices with Filters", func(t *testing.T) {
@@ -193,7 +225,7 @@ func TestDeviceAPI(t *testing.T) {
 		}
 
 		// Test 1: Get all devices (no filters)
-		getAllReq := httptest.NewRequest("GET", "/devices", nil)
+		getAllReq := httptest.NewRequest("GET", "/api/v1/devices", nil)
 		SetAuthHeader(getAllReq)
 
 		var getAllResponse map[string]interface{}
@@ -201,7 +233,7 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, float64(3), getAllResponse["count"], "Expected 3 devices but got %0.f", getAllResponse["count"])
 
 		// Test 2: Filter by employee (exact match)
-		getByEmployeeReq := httptest.NewRequest("GET", "/devices?employee=jdo", nil)
+		getByEmployeeReq := httptest.NewRequest("GET", "/api/v1/devices?employee=jdo", nil)
 		SetAuthHeader(getByEmployeeReq)
 
 		var getByEmployeeResponse map[string]interface{}
@@ -209,7 +241,7 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, float64(2), getByEmployeeResponse["count"], "Expected 2 devices with employee jdo but got %0.f", getByEmployeeResponse["count"])
 
 		// Test 3: Filter by type (exact match)
-		getByTypeReq := httptest.NewRequest("GET", "/devices?type=phone", nil)
+		getByTypeReq := httptest.NewRequest("GET", "/api/v1/devices?type=phone", nil)
 		SetAuthHeader(getByTypeReq)
 
 		var getByTypeResponse map[string]interface{}
@@ -217,7 +249,7 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, float64(1), getByTypeResponse["count"], "Expected 1 device with type phone but got %0.f", getByTypeResponse["count"])
 
 		// Test 4: Filter by IP (like search)
-		getByIpReq := httptest.NewRequest("GET", "/devices?ip=192.168", nil)
+		getByIpReq := httptest.NewRequest("GET", "/api/v1/devices?ip=192.168", nil)
 		SetAuthHeader(getByIpReq)
 
 		var getByIpResponse map[string]interface{}
@@ -225,7 +257,7 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, float64(2), getByIpResponse["count"], "Expected 2 devices with IP 192.168 but got %0.f", getByIpResponse["count"])
 
 		// Test 5: Filter by MAC (like search)
-		getByMacReq := httptest.NewRequest("GET", "/devices?mac=aa:bb", nil)
+		getByMacReq := httptest.NewRequest("GET", "/api/v1/devices?mac=aa:bb", nil)
 		SetAuthHeader(getByMacReq)
 
 		var getByMacResponse map[string]interface{}
@@ -233,7 +265,7 @@ func TestDeviceAPI(t *testing.T) {
 		assert.Equal(t, float64(2), getByMacResponse["count"], "Expected 1 device with MAC aa:bb but got %0.f", getByMacResponse["count"])
 
 		// Test 6: Combine multiple filters
-		getCombinedReq := httptest.NewRequest("GET", "/devices?employee=jdo&type=laptop", nil)
+		getCombinedReq := httptest.NewRequest("GET", "/api/v1/devices?employee=jdo&type=laptop", nil)
 		SetAuthHeader(getCombinedReq)
 
 		var getCombinedResponse map[string]interface{}
@@ -276,7 +308,7 @@ func BenchmarkDeviceCreation(b *testing.B) {
 		}
 
 		jsonData, _ := json.Marshal(deviceData)
-		req := httptest.NewRequest("POST", "/devices", bytes.NewBuffer(jsonData))
+		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
 		SetAuthHeader(req)
 		req.Header.Set("Content-Type", "application/json")
 
