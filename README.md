@@ -61,6 +61,10 @@ go test ./integration/...
 
 ## Decisions & Rationale
 
+## Dependencies
+
+I generally prefer to write more functionality myself and avoid pulling in unnecessary dependencies—especially given Go's excellent standard library, which often covers most needs out of the box. However, to keep development time low, I chose to use Fiber for its simplicity and performance, and pgx for its rich PostgreSQL support and better control over database interactions compared to the standard database/sql package.
+
 ### Familiar Structure
 
 The project uses a structure that aligns with common Go practices. This reduces the onboarding time for new developers.
