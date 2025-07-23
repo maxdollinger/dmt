@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"dmt/pkg/device"
-	"fmt"
 	"testing"
 	"time"
 
@@ -28,45 +27,21 @@ func TestNotifyDeviceCount(t *testing.T) {
 		_, db := testDB.CreateApp(t)
 		defer db.Close(context.Background())
 
-		// Insert 2 devices for employee "jdo" - should not trigger notification
-		testDevices := []*device.Device{
-			{
-				Name:     "Device 1",
-				Type:     "laptop",
-				IP:       "192.168.1.100",
-				MAC:      "aa:bb:cc:dd:ee:01",
-				Employee: stringPtr("jdo"),
-			},
-			{
-				Name:     "Device 2",
-				Type:     "phone",
-				IP:       "192.168.1.101",
-				MAC:      "aa:bb:cc:dd:ee:02",
-				Employee: stringPtr("jdo"),
-			},
-		}
+		testDevices := createTestDevicesForEmployee(2, "jdo")
 
 		for _, testDevice := range testDevices {
 			err := device.InsertDevice(context.Background(), db, testDevice)
 			require.NoError(t, err)
 		}
 
-		// Wait a bit to ensure no notification is sent
 		select {
 		case notification := <-notificationChan:
 			t.Fatalf("Unexpected notification received: %+v", notification)
 		case <-time.After(500 * time.Millisecond):
-			// Expected - no notification should be sent for < 4 devices
+			// nothing should happen
 		}
 
-		// Insert third device - should trigger notification
-		thirdDevice := &device.Device{
-			Name:     "Device 3",
-			Type:     "tablet",
-			IP:       "192.168.1.102",
-			MAC:      "aa:bb:cc:dd:ee:03",
-			Employee: stringPtr("jdo"),
-		}
+		thirdDevice := createTestDevice(withEmployee("jdo"))
 
 		err := device.InsertDevice(context.Background(), db, thirdDevice)
 		require.NoError(t, err)
@@ -79,14 +54,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 			t.Fatal("Expected notification not received within timeout")
 		}
 
-		// Insert fourth device - should trigger another notification
-		fourthDevice := &device.Device{
-			Name:     "Device 4",
-			Type:     "desktop",
-			IP:       "192.168.1.103",
-			MAC:      "aa:bb:cc:dd:ee:04",
-			Employee: stringPtr("jdo"),
-		}
+		fourthDevice := createTestDevice(withEmployee("jdo"))
 
 		err = device.InsertDevice(context.Background(), db, fourthDevice)
 		require.NoError(t, err)
@@ -115,26 +83,17 @@ func TestNotifyDeviceCount(t *testing.T) {
 		_, db := testDB.CreateApp(t)
 		defer db.Close(context.Background())
 
-		// Create 3 devices for each of two employees
 		employees := []string{"ali", "bob"}
 		receivedNotifications := make(map[string]int)
 
-		for i, emp := range employees {
-			for j := 1; j <= 3; j++ {
-				testDevice := &device.Device{
-					Name:     emp + " Device " + string(rune(i+j)),
-					Type:     "laptop",
-					IP:       fmt.Sprintf("192.168.%d.%d", i, j),
-					MAC:      emp[:1] + emp[:1] + ":bb:cc:dd:ee:0" + string(rune('0'+i+j)),
-					Employee: &emp,
-				}
-
+		for _, emp := range employees {
+			devices := createTestDevicesForEmployee(3, emp)
+			for _, testDevice := range devices {
 				err := device.InsertDevice(context.Background(), db, testDevice)
 				require.NoError(t, err)
 			}
 		}
 
-		// Collect notifications for both employees
 		timeout := time.After(5 * time.Second)
 		for len(receivedNotifications) < 2 {
 			select {
@@ -164,15 +123,9 @@ func TestNotifyDeviceCount(t *testing.T) {
 		_, db := testDB.CreateApp(t)
 		defer db.Close(context.Background())
 
-		for i := 1; i <= 3; i++ {
-			testDevice := &device.Device{
-				Name:     "Cha Device " + string(rune('0'+i)),
-				Type:     "laptop",
-				IP:       "192.168.1.10" + string(rune('0'+i)),
-				MAC:      "cc:cc:cc:dd:ee:0" + string(rune('0'+i)),
-				Employee: stringPtr("jsm"),
-			}
+		devices := createTestDevicesForEmployee(3, "jsm")
 
+		for _, testDevice := range devices {
 			err := device.InsertDevice(context.Background(), db, testDevice)
 			require.NoError(t, err)
 		}
@@ -185,21 +138,13 @@ func TestNotifyDeviceCount(t *testing.T) {
 			t.Fatal("Expected notification not received within timeout")
 		}
 
-		testDevice := &device.Device{
-			Name:     "Device",
-			Type:     "laptop",
-			IP:       "192.168.1.99",
-			MAC:      "cc:cc:cc:dd:ee:99",
-			Employee: stringPtr("jdo"),
-		}
+		testDevice := createTestDevice(withEmployee("jdo"))
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
 
-		var deviceID int
-		err = db.QueryRow(context.Background(),
-			"UPDATE device SET employee = 'jsm' WHERE employee = 'jdo' AND id = (SELECT id FROM device WHERE employee = 'jdo' LIMIT 1) RETURNING id").Scan(&deviceID)
-		require.NoError(t, err)
+		testDevice.Employee = stringPtr("jsm")
+		err = device.UpdateDevice(context.Background(), db, testDevice)
 
 		select {
 		case notification := <-notificationChan:

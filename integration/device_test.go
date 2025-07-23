@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -104,9 +103,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		testDevice := createTestDevice(&DeviceTestOptions{
-			Employee: "jsm",
-		})
+		testDevice := createTestDevice(withEmployee("jsm"))
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
@@ -140,9 +137,7 @@ func TestDeviceAPI(t *testing.T) {
 		defer testDB.ClearDB(t)
 		app, db := testDB.CreateApp(t)
 
-		testDevice := createTestDevice(&DeviceTestOptions{
-			Employee: "jdo",
-		})
+		testDevice := createTestDevice(withEmployee("jdo"))
 
 		err := device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
@@ -169,30 +164,27 @@ func TestDeviceAPI(t *testing.T) {
 		app, db := testDB.CreateApp(t)
 
 		testDevices := []*device.Device{
-			createTestDevice(&DeviceTestOptions{
-				Name:        "Device 1",
-				Type:        "laptop",
-				IP:          "192.168.1.100",
-				MAC:         "aa:bb:cc:dd:ee:ff",
-				Description: "Test laptop",
-				Employee:    "jdo",
-			}),
-			createTestDevice(&DeviceTestOptions{
-				Name:        "Device 2",
-				Type:        "phone",
-				IP:          "192.168.2.100",
-				MAC:         "bb:cc:dd:ee:ff:aa",
-				Description: "Test phone",
-				Employee:    "jsm",
-			}),
-			createTestDevice(&DeviceTestOptions{
-				Name:        "Device 3",
-				Type:        "laptop",
-				IP:          "10.0.1.100",
-				MAC:         "cc:dd:ee:ff:aa:bb",
-				Description: "Another laptop",
-				Employee:    "jdo",
-			}),
+			createTestDevice(
+				withName("Device 1"),
+				withType("laptop"),
+				withIP("192.168.1.100"),
+				withMAC("aa:bb:cc:dd:ee:ff"),
+				withEmployee("jdo"),
+			),
+			createTestDevice(
+				withName("Device 2"),
+				withType("phone"),
+				withIP("192.168.2.101"),
+				withMAC("bb:cc:dd:ee:ff:aa"),
+				withEmployee("jsm"),
+			),
+			createTestDevice(
+				withName("Device 3"),
+				withType("laptop"),
+				withIP("10.0.1.102"),
+				withMAC("cc:dd:ee:ff:aa:bb"),
+				withEmployee("jdo"),
+			),
 		}
 
 		for _, testDevice := range testDevices {
@@ -262,124 +254,17 @@ func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus
 	}
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
-
-type DeviceTestOptions struct {
-	Name        string
-	Type        string
-	IP          string
-	MAC         string
-	Description string // Will be converted to *string internally
-	Employee    string // Will be converted to *string internally
-	IPSuffix    int    // For generating unique IPs like 192.168.1.{IPSuffix}
-}
-
-func createTestDeviceData(opts ...*DeviceTestOptions) map[string]interface{} {
-	options := getDeviceOptions(opts...)
-
-	data := map[string]interface{}{
-		"name": options.Name,
-		"type": options.Type,
-		"ip":   options.IP,
-		"mac":  options.MAC,
-	}
-
-	if options.Description != "" {
-		data["description"] = options.Description
-	}
-
-	if options.Employee != "" {
-		data["employee"] = options.Employee
-	}
-
-	return data
-}
-
-func createTestDevice(opts ...*DeviceTestOptions) *device.Device {
-	options := getDeviceOptions(opts...)
-
-	var description *string
-	if options.Description != "" {
-		description = &options.Description
-	}
-
-	var employee *string
-	if options.Employee != "" {
-		employee = &options.Employee
-	}
-
-	return &device.Device{
-		Name:        options.Name,
-		Type:        options.Type,
-		IP:          options.IP,
-		MAC:         options.MAC,
-		Description: description,
-		Employee:    employee,
-	}
-}
-
-func getDeviceOptions(opts ...*DeviceTestOptions) *DeviceTestOptions {
-	options := &DeviceTestOptions{
-		Name:     "Test Device",
-		Type:     "laptop",
-		IP:       "192.168.1.100",
-		MAC:      "aa:bb:cc:dd:ee:ff",
-		IPSuffix: 100,
-	}
-
-	if len(opts) > 0 && opts[0] != nil {
-		userOpts := opts[0]
-		if userOpts.Name != "" {
-			options.Name = userOpts.Name
-		}
-		if userOpts.Type != "" {
-			options.Type = userOpts.Type
-		}
-		if userOpts.IP != "" {
-			options.IP = userOpts.IP
-		} else if userOpts.IPSuffix != 0 {
-			options.IP = fmt.Sprintf("192.168.1.%d", userOpts.IPSuffix)
-		}
-		if userOpts.MAC != "" {
-			options.MAC = userOpts.MAC
-		}
-		if userOpts.Description != "" {
-			options.Description = userOpts.Description
-		}
-		if userOpts.Employee != "" {
-			options.Employee = userOpts.Employee
-		}
-		if userOpts.IPSuffix != 0 {
-			options.IPSuffix = userOpts.IPSuffix
-		}
-	}
-
-	return options
-}
-
-func generateUniqueMAC(index int) string {
-	return fmt.Sprintf("%02x:bb:cc:dd:ee:%02x", index%256, (index/256)%256)
-}
-
 func BenchmarkDeviceCreation(b *testing.B) {
 	t := &testing.T{}
 	testDB := SetupTestDB(t)
 	defer testDB.Cleanup(t)
-	defer testDB.ClearDB(t)
 
 	app, _ := testDB.CreateApp(&testing.T{})
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		deviceData := createTestDeviceData(&DeviceTestOptions{
-			Name:     "Benchmark Device " + strconv.Itoa(i),
-			Type:     "laptop",
-			IPSuffix: 100 + i%50,
-			MAC:      generateUniqueMAC(i),
-		})
+		deviceData := createTestDeviceData()
 
 		jsonData, _ := json.Marshal(deviceData)
 		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
