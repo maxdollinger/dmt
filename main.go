@@ -17,12 +17,7 @@ func main() {
 	db := internals.ConnectDb(ctx, databaseURL)
 	defer db.Close(ctx)
 
-	notificationChan := device.DeviceCountListener(ctx, databaseURL)
-	go func() {
-		for notification := range notificationChan {
-			device.SendNotification(notificationUrl, &notification)
-		}
-	}()
+	device.HandleDeviceCountNotifications(ctx, databaseURL, notificationUrl)
 
 	app := internals.CreateApp(db, apiKey)
 

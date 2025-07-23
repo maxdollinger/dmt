@@ -23,6 +23,15 @@ type NotificationRequest struct {
 	Message              string `json:"message"`
 }
 
+func HandleDeviceCountNotifications(ctx context.Context, databaseURL string, notificationUrl string) {
+	notificationChan := DeviceCountListener(ctx, databaseURL)
+	go func() {
+		for notification := range notificationChan {
+			SendNotification(notificationUrl, &notification)
+		}
+	}()
+}
+
 func SendNotification(notificationUrl string, notification *Notification) {
 	notificationReq := NotificationRequest{
 		Level:                "warning",
@@ -55,9 +64,6 @@ func SendNotification(notificationUrl string, notification *Notification) {
 	log.Infof("Successfully sent notification - Message: %s", notificationReq.Message)
 }
 
-// DeviceCountListener listens for PostgreSQL notifications on the device_count channel
-// and returns a channel that emits parsed Notification structs.
-// The function will run until the context is cancelled or an unrecoverable error occurs.
 func DeviceCountListener(ctx context.Context, url string) <-chan Notification {
 	notificationChan := make(chan Notification, 10)
 
