@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"dmt/pkg/device"
+	"fmt"
 	"testing"
 	"time"
 
@@ -118,13 +119,13 @@ func TestNotifyDeviceCount(t *testing.T) {
 		employees := []string{"ali", "bob"}
 		receivedNotifications := make(map[string]int)
 
-		for _, emp := range employees {
-			for i := 1; i <= 3; i++ {
+		for i, emp := range employees {
+			for j := 1; j <= 3; j++ {
 				testDevice := &device.Device{
-					Name:     emp + " Device " + string(rune('0'+i)),
+					Name:     emp + " Device " + string(rune(i+j)),
 					Type:     "laptop",
-					IP:       "192.168.1." + string(rune('0'+i)),
-					MAC:      emp[:1] + emp[:1] + ":bb:cc:dd:ee:0" + string(rune('0'+i)),
+					IP:       fmt.Sprintf("192.168.%d.%d", i, j),
+					MAC:      emp[:1] + emp[:1] + ":bb:cc:dd:ee:0" + string(rune('0'+i+j)),
 					Employee: &emp,
 				}
 
