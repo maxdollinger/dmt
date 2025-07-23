@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Notification struct {
@@ -23,8 +24,13 @@ type NotificationRequest struct {
 	Message              string `json:"message"`
 }
 
-func HandleDeviceCountNotifications(ctx context.Context, databaseURL string, notificationUrl string) {
-	notificationChan := DeviceCountListener(ctx, databaseURL)
+func HandleDeviceCountNotifications(ctx context.Context, db *pgxpool.Pool, notificationUrl string) {
+	conn, err := db.Acquire(ctx)
+	if err != nil {
+		log.Fatalf("Failed to acquire connection from pool: %s", err.Error())
+	}
+
+	notificationChan := DeviceCountListener(ctx, conn.Conn())
 	go func() {
 		for notification := range notificationChan {
 			SendNotification(notificationUrl, &notification)
@@ -64,24 +70,13 @@ func SendNotification(notificationUrl string, notification *Notification) {
 	log.Infof("Successfully sent notification - Message: %s", notificationReq.Message)
 }
 
-func DeviceCountListener(ctx context.Context, url string) <-chan Notification {
+func DeviceCountListener(ctx context.Context, conn *pgx.Conn) <-chan Notification {
 	notificationChan := make(chan Notification, 10)
 
 	go func() {
 		defer close(notificationChan)
 
-		conn, err := pgx.Connect(ctx, url)
-		if err != nil {
-			log.Fatalf("Failed to connect to PostgreSQL: %s", err)
-		}
-		defer conn.Close(ctx)
-
-		err = conn.Ping(ctx)
-		if err != nil {
-			log.Fatalf("Failed to ping PostgreSQL: %s", err)
-		}
-
-		_, err = conn.Exec(ctx, "LISTEN device_count")
+		_, err := conn.Exec(ctx, "LISTEN device_count")
 		if err != nil {
 			log.Fatalf("Failed to listen for device count notifications: %s", err)
 		}

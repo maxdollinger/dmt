@@ -7,10 +7,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func CreateHttpServer(db *pgx.Conn, apiKey string) *fiber.App {
+func CreateHttpServer(db *pgxpool.Pool, apiKey string) *fiber.App {
 	app := fiber.New()
 
 	app.Use(logger.New())

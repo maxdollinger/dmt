@@ -15,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -70,7 +71,7 @@ func (tc *TestContainer) Cleanup(t *testing.T) {
 	}
 }
 
-func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgx.Conn) {
+func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgxpool.Pool) {
 	ctx := context.Background()
 
 	db := internals.ConnectDb(ctx, tc.ConnString)

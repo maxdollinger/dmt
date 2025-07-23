@@ -15,9 +15,9 @@ func main() {
 
 	ctx := context.Background()
 	db := internals.ConnectDb(ctx, databaseURL)
-	defer db.Close(ctx)
+	defer db.Close()
 
-	device.HandleDeviceCountNotifications(ctx, databaseURL, notificationUrl)
+	device.HandleDeviceCountNotifications(ctx, db, notificationUrl)
 
 	server := internals.CreateHttpServer(db, apiKey)
 

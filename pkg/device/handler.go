@@ -6,17 +6,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DeviceService struct {
-	db *pgx.Conn
+type DeviceHandler struct {
+	db *pgxpool.Pool
 }
 
-func NewDeviceHandler(db *pgx.Conn) *DeviceService {
-	return &DeviceService{db: db}
+func NewDeviceHandler(db *pgxpool.Pool) *DeviceHandler {
+	return &DeviceHandler{db: db}
 }
 
-func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
+func (s *DeviceHandler) CreateDevice(c *fiber.Ctx) error {
 	device := new(Device)
 	err := c.BodyParser(&device)
 	if err != nil {
@@ -41,7 +42,7 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 	})
 }
 
-func (s *DeviceService) GetDeviceByID(c *fiber.Ctx) error {
+func (s *DeviceHandler) GetDeviceByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -68,7 +69,7 @@ func (s *DeviceService) GetDeviceByID(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(device)
 }
 
-func (s *DeviceService) DeleteDevice(c *fiber.Ctx) error {
+func (s *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -93,7 +94,7 @@ func (s *DeviceService) DeleteDevice(c *fiber.Ctx) error {
 	})
 }
 
-func (s *DeviceService) UpdateDeviceEmployee(c *fiber.Ctx) error {
+func (s *DeviceHandler) UpdateDeviceEmployee(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -130,7 +131,7 @@ func (s *DeviceService) UpdateDeviceEmployee(c *fiber.Ctx) error {
 	})
 }
 
-func (s *DeviceService) DeleteDeviceEmployee(c *fiber.Ctx) error {
+func (s *DeviceHandler) DeleteDeviceEmployee(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -157,7 +158,7 @@ func (s *DeviceService) DeleteDeviceEmployee(c *fiber.Ctx) error {
 	})
 }
 
-func (s *DeviceService) GetDevices(c *fiber.Ctx) error {
+func (s *DeviceHandler) GetDevices(c *fiber.Ctx) error {
 	employee := c.Query("employee")
 	deviceType := c.Query("type")
 	ip := c.Query("ip")

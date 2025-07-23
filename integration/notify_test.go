@@ -13,6 +13,7 @@ import (
 func TestNotifyDeviceCount(t *testing.T) {
 	testDB := SetupTestDB(t)
 	defer testDB.Cleanup(t)
+	_, db := testDB.CreateApp(t)
 
 	t.Run("Notification Triggered When Employee Has 3+ Devices", func(t *testing.T) {
 		defer testDB.ClearDB(t)
@@ -20,12 +21,15 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
+		conn, err := db.Acquire(ctx)
+		assert.NoError(t, err)
+
+		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
 
 		time.Sleep(100 * time.Millisecond)
 
 		_, db := testDB.CreateApp(t)
-		defer db.Close(context.Background())
+		defer db.Close()
 
 		testDevices := createTestDevicesForEmployee(2, "jdo")
 
@@ -43,7 +47,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 
 		thirdDevice := createTestDevice(withEmployee("jdo"))
 
-		err := device.InsertDevice(context.Background(), db, thirdDevice)
+		err = device.InsertDevice(context.Background(), db, thirdDevice)
 		require.NoError(t, err)
 
 		select {
@@ -76,12 +80,15 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
+		conn, err := db.Acquire(ctx)
+		assert.NoError(t, err)
+
+		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
 
 		time.Sleep(100 * time.Millisecond)
 
 		_, db := testDB.CreateApp(t)
-		defer db.Close(context.Background())
+		defer db.Close()
 
 		employees := []string{"ali", "bob"}
 		receivedNotifications := make(map[string]int)
@@ -116,12 +123,15 @@ func TestNotifyDeviceCount(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		notificationChan := device.DeviceCountListener(ctx, testDB.ConnString)
+		conn, err := db.Acquire(ctx)
+		assert.NoError(t, err)
+
+		notificationChan := device.DeviceCountListener(ctx, conn.Conn())
 
 		time.Sleep(100 * time.Millisecond)
 
 		_, db := testDB.CreateApp(t)
-		defer db.Close(context.Background())
+		defer db.Close()
 
 		devices := createTestDevicesForEmployee(3, "jsm")
 
@@ -140,7 +150,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 
 		testDevice := createTestDevice(withEmployee("jdo"))
 
-		err := device.InsertDevice(context.Background(), db, testDevice)
+		err = device.InsertDevice(context.Background(), db, testDevice)
 		require.NoError(t, err)
 
 		testDevice.Employee = stringPtr("jsm")

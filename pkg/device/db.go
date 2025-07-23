@@ -9,9 +9,10 @@ import (
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func InsertDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
+func InsertDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	sanitizeDevice(device)
 
 	if validationErrors := validateDevice(device); len(validationErrors) > 0 {
@@ -48,7 +49,7 @@ func InsertDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 }
 
 // Only updates employee field for now
-func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
+func UpdateDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	if device.ID < 1 {
 		return errors.New("device ID is required")
 	}
@@ -112,7 +113,7 @@ func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 	return nil
 }
 
-func DeleteDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
+func DeleteDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	query := `
 		DELETE FROM device 
 		WHERE id = $1 
@@ -129,7 +130,7 @@ func DeleteDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 	return nil
 }
 
-func GetDeviceByID(ctx context.Context, db *pgx.Conn, device *Device) error {
+func GetDeviceByID(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	query := `
 		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee 
 		FROM device 
@@ -158,7 +159,7 @@ func GetDeviceByID(ctx context.Context, db *pgx.Conn, device *Device) error {
 	return nil
 }
 
-func GetDevices(ctx context.Context, db *pgx.Conn, employee, deviceType, ip, mac string) ([]Device, error) {
+func GetDevices(ctx context.Context, db *pgxpool.Pool, employee, deviceType, ip, mac string) ([]Device, error) {
 	query := `
 		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee 
 		FROM device 

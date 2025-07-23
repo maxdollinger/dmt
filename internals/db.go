@@ -4,19 +4,19 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func ConnectDb(ctx context.Context, databaseURL string) *pgx.Conn {
-	conn, err := pgx.Connect(ctx, databaseURL)
+func ConnectDb(ctx context.Context, databaseURL string) *pgxpool.Pool {
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to create connection pool: %v\n", err)
 	}
 
-	err = conn.Ping(ctx)
+	err = pool.Ping(ctx)
 	if err != nil {
 		log.Fatalf("Unable to ping database: %v\n", err)
 	}
 
-	return conn
+	return pool
 }
