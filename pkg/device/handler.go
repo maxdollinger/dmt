@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -11,7 +12,7 @@ type DeviceService struct {
 	db *pgx.Conn
 }
 
-func NewDeviceService(db *pgx.Conn) *DeviceService {
+func NewDeviceHandler(db *pgx.Conn) *DeviceService {
 	return &DeviceService{db: db}
 }
 
@@ -27,7 +28,8 @@ func (s *DeviceService) CreateDevice(c *fiber.Ctx) error {
 	err = InsertDevice(c.Context(), s.db, device)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create device",
+			"error":   "Failed to create device",
+			"message": err.Error(),
 		})
 	}
 
@@ -41,6 +43,7 @@ func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
+		log.Errorf("Invalid device ID: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid device ID",
 		})
@@ -49,6 +52,7 @@ func (s *DeviceService) GetDevice(c *fiber.Ctx) error {
 	device := &Device{ID: id}
 	err = GetDeviceByID(c.Context(), s.db, device)
 	if err != nil {
+		log.Errorf("Failed to retrieve device: %s", err.Error())
 		if err == pgx.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Device not found",
@@ -66,6 +70,7 @@ func (s *DeviceService) DeleteDevice(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
+		log.Errorf("Invalid device ID: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid device ID",
 		})
@@ -74,8 +79,10 @@ func (s *DeviceService) DeleteDevice(c *fiber.Ctx) error {
 	device := &Device{ID: id}
 	err = DeleteDevice(c.Context(), s.db, device)
 	if err != nil {
+		log.Errorf("Failed to delete device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete device",
+			"error":   "Failed to delete device",
+			"message": err.Error(),
 		})
 	}
 
@@ -88,39 +95,30 @@ func (s *DeviceService) UpdateDeviceEmployee(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
+		log.Errorf("Invalid device ID: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid device ID",
 		})
 	}
 
 	var requestBody struct {
-		Employee *string `json:"employee"`
+		Employee string `json:"employee"`
 	}
 	err = c.BodyParser(&requestBody)
 	if err != nil {
+		log.Errorf("Invalid JSON format: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid JSON format",
 		})
 	}
 
-	device := &Device{ID: id}
-	err = GetDeviceByID(c.Context(), s.db, device)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Device not found",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve device",
-		})
-	}
-
-	device.Employee = requestBody.Employee
+	device := &Device{ID: id, Employee: &requestBody.Employee}
 	err = UpdateDevice(c.Context(), s.db, device)
 	if err != nil {
+		log.Errorf("Failed to update device: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update device employee",
+			"error":   "Failed to update device employee",
+			"message": err.Error(),
 		})
 	}
 
@@ -134,29 +132,20 @@ func (s *DeviceService) DeleteDeviceEmployee(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
+		log.Errorf("Invalid device ID: %s", err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid device ID",
 		})
 	}
 
-	device := &Device{ID: id}
-	err = GetDeviceByID(c.Context(), s.db, device)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Device not found",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve device",
-		})
-	}
-
-	device.Employee = nil
+	employee := ""
+	device := &Device{ID: id, Employee: &employee}
 	err = UpdateDevice(c.Context(), s.db, device)
 	if err != nil {
+		log.Errorf("Failed to remove device employee: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to remove device employee",
+			"error":   "Failed to remove device employee",
+			"message": err.Error(),
 		})
 	}
 

@@ -145,6 +145,7 @@ func TestNotifyDeviceCount(t *testing.T) {
 
 		testDevice.Employee = stringPtr("jsm")
 		err = device.UpdateDevice(context.Background(), db, testDevice)
+		require.NoError(t, err)
 
 		select {
 		case notification := <-notificationChan:

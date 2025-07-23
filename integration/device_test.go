@@ -126,7 +126,7 @@ func TestDeviceAPI(t *testing.T) {
 		dbDevice := &device.Device{ID: testDevice.ID}
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
-		assert.Equal(t, employeeData["employee"], *dbDevice.Employee)
+		assert.Equal(t, employeeData["employee"], *dbDevice.Employee, "Expected device employee be the same but is not")
 		assert.Equal(t, testDevice.Name, dbDevice.Name)
 		assert.Equal(t, testDevice.Type, dbDevice.Type)
 		assert.Equal(t, testDevice.IP, dbDevice.IP)
@@ -153,10 +153,10 @@ func TestDeviceAPI(t *testing.T) {
 		err = device.GetDeviceByID(context.Background(), db, dbDevice)
 		require.NoError(t, err)
 		assert.Nil(t, dbDevice.Employee, "Expected device to have no employee but employee field is not nil")
-		assert.Equal(t, testDevice.Name, dbDevice.Name)
-		assert.Equal(t, testDevice.Type, dbDevice.Type)
-		assert.Equal(t, testDevice.IP, dbDevice.IP)
-		assert.Equal(t, testDevice.MAC, dbDevice.MAC)
+		assert.Equal(t, testDevice.Name, dbDevice.Name, "Expected device name be the same but is not")
+		assert.Equal(t, testDevice.Type, dbDevice.Type, "Expected device type be the same but is not")
+		assert.Equal(t, testDevice.IP, dbDevice.IP, "Expected device IP be the same but is not")
+		assert.Equal(t, testDevice.MAC, dbDevice.MAC, "Expected device MAC be the same but is not")
 	})
 
 	t.Run("Get Devices with Filters", func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestDeviceAPI(t *testing.T) {
 func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus int, response interface{}) {
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, expectedStatus, resp.StatusCode)
+	assert.Equal(t, expectedStatus, resp.StatusCode, "Expected status code %d but got %d and response: %s", expectedStatus, resp.StatusCode, resp.Body)
 
 	if response != nil && expectedStatus < 300 {
 		err = json.NewDecoder(resp.Body).Decode(response)

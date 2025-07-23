@@ -2,9 +2,12 @@ package device
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -44,37 +47,60 @@ func InsertDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
 	return nil
 }
 
+// Only updates employee field for now
 func UpdateDevice(ctx context.Context, db *pgx.Conn, device *Device) error {
-	sanitizeDevice(device)
-
-	if validationErrors := validateDevice(device); len(validationErrors) > 0 {
-		message := ""
-		for _, err := range validationErrors {
-			message += err.Error() + "; "
-		}
-
-		return fmt.Errorf("validation failed: %s", message)
+	if device.ID < 1 {
+		return errors.New("device ID is required")
 	}
 
-	query := `
-		UPDATE device 
-		SET name = $1, type = $2, ip = $3, mac = $4, description = $5, employee = $6 
-		WHERE id = $7 
-		RETURNING updated_at
-	`
+	args := []interface{}{}
+	sqlChunk := []string{}
+
+	if device.Employee != nil {
+		employee := strings.TrimSpace(*device.Employee)
+		if employee != "" {
+			args = append(args, employee)
+			sqlChunk = append(sqlChunk, fmt.Sprintf(" employee = $%d", len(args)))
+		} else {
+			sqlChunk = append(sqlChunk, " employee = NULL")
+		}
+	}
+
+	if len(sqlChunk) == 0 {
+		return errors.New("no update options provided")
+	}
+
+	strBuilder := strings.Builder{}
+	strBuilder.WriteString("UPDATE device SET")
+
+	for i, chunk := range sqlChunk {
+		strBuilder.WriteString(chunk)
+
+		if i < len(sqlChunk)-1 {
+			strBuilder.WriteString(",")
+		}
+	}
+
+	fmt.Fprintf(&strBuilder, " WHERE id = %d RETURNING id, created_at, updated_at, name, type, ip, mac, description, employee", device.ID)
+
+	query := strBuilder.String()
+
+	log.Infof("Executing query: %s", query)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	err := db.QueryRow(ctx, query,
-		device.Name,
-		device.Type,
-		device.IP,
-		device.MAC,
-		device.Description,
-		device.Employee,
-		device.ID,
-	).Scan(&device.UpdatedAt)
+	err := db.QueryRow(ctx, query, args...).Scan(
+		&device.ID,
+		&device.CreatedAt,
+		&device.UpdatedAt,
+		&device.Name,
+		&device.Type,
+		&device.IP,
+		&device.MAC,
+		&device.Description,
+		&device.Employee,
+	)
 	if err != nil {
 		return err
 	}

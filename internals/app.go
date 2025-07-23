@@ -1,8 +1,8 @@
 package internals
 
 import (
-	"dmt/internals/api"
 	"dmt/internals/middleware"
+	"dmt/pkg/device"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -17,8 +17,17 @@ func CreateApp(db *pgx.Conn, apiKey string) *fiber.App {
 	app.Use(recover.New())
 	app.Use(middleware.KeyAuthMiddleware(apiKey))
 
-	v1Router := api.CreateV1Router(db)
-	app.Mount("/api/v1", v1Router)
+	api := app.Group("/api")
+	v1 := api.Group("/v1")
+
+	deviceHandler := device.NewDeviceHandler(db)
+
+	v1.Post("/devices", deviceHandler.CreateDevice)
+	v1.Get("/devices", deviceHandler.GetDevices)
+	v1.Get("/devices/:id", deviceHandler.GetDevice)
+	v1.Put("/devices/:id/employee", deviceHandler.UpdateDeviceEmployee)
+	v1.Delete("/devices/:id/employee", deviceHandler.DeleteDeviceEmployee)
+	v1.Delete("/devices/:id", deviceHandler.DeleteDevice)
 
 	return app
 }
