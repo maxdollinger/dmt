@@ -5,6 +5,7 @@ import (
 	"dmt/pkg/device"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,9 +18,11 @@ func CreateHttpServer(db *pgxpool.Pool, apiKey string) *fiber.App {
 
 	app.Use(logger.New())
 	app.Use(recover.New())
-	app.Use(middleware.KeyAuthMiddleware(apiKey))
+	app.Use(healthcheck.New())
 
 	api := app.Group("/api")
+	api.Use(middleware.KeyAuthMiddleware(apiKey))
+
 	v1 := api.Group("/v1")
 
 	deviceHandler := device.NewDeviceHandler(db)
