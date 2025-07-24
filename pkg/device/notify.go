@@ -43,6 +43,8 @@ func HandleDeviceCountNotifications(ctx context.Context, db *pgxpool.Pool, notif
 		for notification := range notificationChan {
 			if notificationUrl != "" {
 				SendNotification(notificationUrl, &notification)
+			} else {
+				log.Warnf("Notification URL is not set, skipping notification")
 			}
 		}
 	}()
@@ -123,6 +125,7 @@ func DeviceCountListener(ctx context.Context, conn *pgx.Conn) (<-chan Notificati
 				if deviceNotification.Count >= 3 {
 					select {
 					case notificationChan <- deviceNotification:
+						log.Infof("Notification sent to alarm service")
 					case <-ctx.Done():
 						return
 					}
