@@ -31,7 +31,7 @@ dmt/
 ### Development
 
 ```bash
-# Start services (PostgreSQL + Notification service)
+# Start the application with all needed services
 docker-compose up -d
 ```
 
