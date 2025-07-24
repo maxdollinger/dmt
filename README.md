@@ -80,7 +80,7 @@ PostgreSQL triggers and listeners are used to separate route handling from devic
 
 ### Simplicity in Data Types
 
-Native INET and MACADDR types were not used to avoid complexity, but they should be considered in a real-world system for data integrity and validation.
+Native Postgres INET and MACADDR types were not used to avoid complexity, but they should be considered in a real-world system for data integrity and validation.
 
 ### Testing & DX
 
