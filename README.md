@@ -81,22 +81,16 @@ PostgreSQL triggers and listeners are used to separate route handling from devic
 ### Simplicity in Data Types
 
 Native INET and MACADDR types were not used to avoid complexity, but they should be considered in a real-world system for data integrity and validation.
-Testing Focus
 
 ### Testing & DX
 
-Significant effort went into integration testing because it's the most stable and valuable layer for ensuring system behavior. Good DX here leads to more thorough and confident testing. Live resloading of the DEV Container would be nice but skipped for now.
-API Key Handling
+Significant effort went into integration testing because it's the most stable and valuable layer for ensuring system behavior. Good DX here leads to more thorough and confident testing. Live reloading of the DEV container would be also nice but skipped for now.
 
 ### Production Considerations
 
-- For development speed, the API key is hardcoded. In production, it should:
+- For development speed, the API key is hardcoded. In production, keys should be stored in the db and hashed.
 
-  - Be stored in the database
-  - Be hashed securely
-  - Be rotated and managed properly
-
-- Logging & Monitoring: Improve structured logging; add tracing and monitoring.
+- Logging & Monitoring: Improve logging anbd add tracing, monitoring.
 
 - Secrets Management: Use a secret manager instead of raw environment variables.
 
