@@ -17,7 +17,7 @@ import (
 
 func TestDeviceAPI(t *testing.T) {
 	testDB := SetupTestDB(t)
-	defer testDB.Cleanup(t)
+	defer testDB.Terminate(t)
 
 	t.Run("Create and Get Device", func(t *testing.T) {
 		defer testDB.ClearDB(t)
@@ -257,7 +257,7 @@ func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus
 func BenchmarkDeviceCreation(b *testing.B) {
 	t := &testing.T{}
 	testDB := SetupTestDB(t)
-	defer testDB.Cleanup(t)
+	defer testDB.Terminate(t)
 
 	app, _ := testDB.CreateApp(&testing.T{})
 

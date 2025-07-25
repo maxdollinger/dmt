@@ -65,7 +65,7 @@ func SetupTestDB(t *testing.T) *TestContainer {
 	return tc
 }
 
-func (tc *TestContainer) Cleanup(t *testing.T) {
+func (tc *TestContainer) Terminate(t *testing.T) {
 	if err := testcontainers.TerminateContainer(tc.Container); err != nil {
 		t.Logf("Failed to terminate container: %v", err)
 	}
