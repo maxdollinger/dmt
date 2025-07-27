@@ -54,8 +54,14 @@ func TestDeviceAPI(t *testing.T) {
 		makeRequest(t, app, req, http.StatusNotFound, nil)
 	})
 
-	t.Run("Unauthorized Request", func(t *testing.T) {
+	t.Run("Unauthorized Request - missing apikey", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/devices/1", nil)
+		makeRequest(t, app, req, http.StatusUnauthorized, nil)
+	})
+
+	t.Run("Unauthorized Request - invalid apikey", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/devices/1", nil)
+		req.Header.Set("Authorization", "Bearer invalidKey")
 		makeRequest(t, app, req, http.StatusUnauthorized, nil)
 	})
 
