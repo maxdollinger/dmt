@@ -78,10 +78,6 @@ is used instead of SQLite. While SQLite could have sufficed for the current scop
 
 PostgreSQL triggers and listeners are used to separate route handling from device notification logic. This promotes a cleaner architecture and avoids the need for developers to manually manage notification logic on every update.
 
-### Simplicity in Data Types
-
-Native Postgres INET and MACADDR types were not used to avoid complexity, but they should be considered in a real-world system for data integrity and validation.
-
 ### Testing & DX
 
 Significant effort went into integration testing because it's the most stable and valuable layer for ensuring system behavior. Good DX here leads to more thorough and confident testing. Live reloading of the DEV container would be also nice but skipped for now.
