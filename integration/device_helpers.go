@@ -33,17 +33,24 @@ func generateRandomIP() net.IP {
 	return net.IPv4(byte(192), byte(first), byte(second), byte(thrid))
 }
 
-func generateRandomMAC() string {
+func generateRandomMAC() net.HardwareAddr {
 	randMutex.Lock()
 	defer randMutex.Unlock()
 
-	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
+	addrString := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		0x02|(randSource.Intn(253)),
 		randSource.Intn(256),
 		randSource.Intn(256),
 		randSource.Intn(256),
 		randSource.Intn(256),
 		randSource.Intn(256))
+
+	mac, err := net.ParseMAC(addrString)
+	if err != nil {
+		panic(err)
+	}
+
+	return mac
 }
 
 type DeviceOption func(*device.Device)
@@ -61,7 +68,11 @@ func withIP(ip string) DeviceOption {
 }
 
 func withMAC(mac string) DeviceOption {
-	return func(d *device.Device) { d.MAC = mac }
+	addr, err := net.ParseMAC(mac)
+	if err != nil {
+		panic(err)
+	}
+	return func(d *device.Device) { d.MAC = addr }
 }
 
 func withEmployee(employee string) DeviceOption {

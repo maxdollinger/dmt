@@ -39,14 +39,14 @@ func TestDeviceAPI(t *testing.T) {
 		responseBody := make(map[string]interface{})
 		makeRequest(t, app, req, http.StatusCreated, &responseBody)
 
-		dbDevice := &device.Device{ID: int(responseBody["device"].(map[string]interface{})["id"].(float64))}
-		err = device.GetDeviceByID(ctx, db, dbDevice)
+		createdDevice := &device.Device{ID: int(responseBody["device"].(map[string]interface{})["id"].(float64))}
+		err = device.GetDeviceByID(ctx, db, createdDevice)
 		require.NoError(t, err)
 
-		assert.Equal(t, deviceData.Name, dbDevice.Name)
-		assert.Equal(t, deviceData.Type, dbDevice.Type)
-		assert.Equal(t, deviceData.IP, dbDevice.IP)
-		assert.Equal(t, deviceData.MAC, dbDevice.MAC)
+		assert.Equal(t, deviceData.Name, createdDevice.Name)
+		assert.Equal(t, deviceData.Type, createdDevice.Type)
+		assert.Equal(t, deviceData.IP, createdDevice.IP)
+		assert.Equal(t, deviceData.MAC, createdDevice.MAC, "Expected MAC to be %s but got %s", deviceData.MAC.String(), createdDevice.MAC.String())
 	})
 
 	t.Run("Get Non-existent Device", func(t *testing.T) {

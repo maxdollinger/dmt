@@ -3,7 +3,6 @@ package device
 import (
 	"errors"
 	"net"
-	"regexp"
 	"strings"
 )
 
@@ -34,16 +33,6 @@ func validateIP(ip string) error {
 	return nil
 }
 
-func validateMAC(mac string) error {
-	mac = strings.ToLower(mac)
-	macRegex := regexp.MustCompile(`^([0-9a-f]{2}[:-]){5}([0-9a-f]{2})$`)
-	if !macRegex.MatchString(mac) {
-		return errors.New("invalid MAC address format")
-	}
-
-	return nil
-}
-
 func validateDescription(description *string) error {
 	if description != nil && len(*description) > 500 {
 		return errors.New("description must be less than 500 characters")
@@ -69,10 +58,6 @@ func validateDevice(device *Device) []error {
 		errors = append(errors, err)
 	}
 
-	if err := validateMAC(device.MAC); err != nil {
-		errors = append(errors, err)
-	}
-
 	if err := validateDescription(device.Description); err != nil {
 		errors = append(errors, err)
 	}
@@ -87,11 +72,6 @@ func validateDevice(device *Device) []error {
 func sanitizeDevice(device *Device) {
 	device.Name = strings.TrimSpace(device.Name)
 	device.Type = strings.TrimSpace(device.Type)
-
-	mac := strings.TrimSpace(device.MAC)
-	mac = strings.ToLower(mac)
-	mac = strings.ReplaceAll(mac, "-", ":")
-	device.MAC = mac
 
 	if device.Description != nil {
 		*device.Description = strings.TrimSpace(*device.Description)

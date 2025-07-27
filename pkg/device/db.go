@@ -130,7 +130,7 @@ func DeleteDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 
 func GetDeviceByID(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	query := `
-		SELECT id, created_at, updated_at, name, type, ip, cast(mac as text) as mac, description, employee
+		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee
 		FROM device 
 		WHERE id = $1 
 		LIMIT 1
