@@ -25,7 +25,7 @@ func InsertDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 
 	query := `
 	INSERT INTO device (name, type, ip, mac, description, employee)
-		VALUES ($1, $2, $3::inet, $4::macaddr8, $5, $6)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at, updated_at
 	`
 
