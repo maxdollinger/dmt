@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS device (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     name TEXT NOT NULL,
     type TEXT NOT NULL,
-    ip TEXT NOT NULL UNIQUE,
-    mac TEXT NOT NULL UNIQUE,
+    ip INET NULL UNIQUE,
+    mac MACADDR NOT NULL,
     description TEXT,
     employee VARCHAR(3)
 );

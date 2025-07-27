@@ -162,6 +162,7 @@ func (s *DeviceHandler) GetDevices(c *fiber.Ctx) error {
 
 	devices, err := GetDevices(c.Context(), s.db, employee, deviceType, ip, mac)
 	if err != nil {
+		log.Errorf("Failed to retrieve devices: %s", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to retrieve devices",
 		})

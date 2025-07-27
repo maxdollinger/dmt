@@ -69,10 +69,6 @@ func validateDevice(device *Device) []error {
 		errors = append(errors, err)
 	}
 
-	if err := validateIP(device.IP); err != nil {
-		errors = append(errors, err)
-	}
-
 	if err := validateMAC(device.MAC); err != nil {
 		errors = append(errors, err)
 	}
@@ -91,7 +87,6 @@ func validateDevice(device *Device) []error {
 func sanitizeDevice(device *Device) {
 	device.Name = strings.TrimSpace(device.Name)
 	device.Type = strings.TrimSpace(device.Type)
-	device.IP = strings.TrimSpace(device.IP)
 
 	mac := strings.TrimSpace(device.MAC)
 	mac = strings.ToLower(mac)

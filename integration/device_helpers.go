@@ -4,6 +4,7 @@ import (
 	"dmt/pkg/device"
 	"fmt"
 	"math/rand"
+	"net"
 	"sync"
 	"time"
 )
@@ -22,14 +23,14 @@ func getNextDeviceNumber() int {
 	return deviceCounter
 }
 
-func generateRandomIP() string {
+func generateRandomIP() net.IP {
 	randMutex.Lock()
 	defer randMutex.Unlock()
 
 	first := randSource.Intn(254) + 1
 	second := randSource.Intn(254) + 1
 	thrid := randSource.Intn(254) + 1
-	return fmt.Sprintf("192.%d.%d.%d", first, second, thrid)
+	return net.IPv4(byte(192), byte(first), byte(second), byte(thrid))
 }
 
 func generateRandomMAC() string {
@@ -56,7 +57,7 @@ func withType(deviceType string) DeviceOption {
 }
 
 func withIP(ip string) DeviceOption {
-	return func(d *device.Device) { d.IP = ip }
+	return func(d *device.Device) { d.IP = net.ParseIP(ip) }
 }
 
 func withMAC(mac string) DeviceOption {

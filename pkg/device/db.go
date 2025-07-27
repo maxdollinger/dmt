@@ -24,8 +24,8 @@ func InsertDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	}
 
 	query := `
-		INSERT INTO device (name, type, ip, mac, description, employee) 
-		VALUES ($1, $2, $3, $4, $5, $6) 
+	INSERT INTO device (name, type, ip, mac, description, employee)
+		VALUES ($1, $2, $3::inet, $4::macaddr8, $5, $6)
 		RETURNING id, created_at, updated_at
 	`
 
@@ -130,7 +130,7 @@ func DeleteDevice(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 
 func GetDeviceByID(ctx context.Context, db *pgxpool.Pool, device *Device) error {
 	query := `
-		SELECT id, created_at, updated_at, name, type, ip, mac, description, employee 
+		SELECT id, created_at, updated_at, name, type, ip, cast(mac as text) as mac, description, employee
 		FROM device 
 		WHERE id = $1 
 		LIMIT 1
@@ -180,13 +180,13 @@ func GetDevices(ctx context.Context, db *pgxpool.Pool, employee, deviceType, ip,
 	}
 
 	if ip != "" {
-		query += fmt.Sprintf(" AND ip LIKE $%d", argIndex)
+		query += fmt.Sprintf(" AND cast(ip as text) LIKE $%d", argIndex)
 		args = append(args, "%"+ip+"%")
 		argIndex++
 	}
 
 	if mac != "" {
-		query += fmt.Sprintf(" AND mac ILIKE $%d", argIndex)
+		query += fmt.Sprintf(" AND cast(mac as text) ILIKE $%d", argIndex)
 		args = append(args, "%"+mac+"%")
 		argIndex++
 	}
