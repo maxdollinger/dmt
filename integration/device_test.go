@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"dmt/internal"
 	"dmt/pkg/device"
 	"encoding/json"
 	"fmt"
@@ -16,30 +17,30 @@ import (
 )
 
 func TestDeviceAPI(t *testing.T) {
-	testDB := SetupTestDB(t)
-	defer testDB.Terminate(t)
+	ctx := t.Context()
+	testDB, err := NewTestDB(ctx)
+	require.NoError(t, err)
+	defer testDB.Terminate()
+
+	db, err := testDB.GetConnectionPool()
+	require.NoError(t, err)
+
+	app := internal.CreateHttpServer(db, testAPIKey)
 
 	t.Run("Create and Get Device", func(t *testing.T) {
 		defer testDB.ClearDB(t)
-		app, db := testDB.CreateApp(t)
+		ctx := t.Context()
 
 		deviceData := createTestDevice()
-
 		jsonData, err := json.Marshal(deviceData)
 		require.NoError(t, err)
 
-		req := httptest.NewRequest("POST", "/api/v1/devices", bytes.NewBuffer(jsonData))
-		SetAuthHeader(req)
-		req.Header.Set("Content-Type", "application/json")
+		req := JSONRequestWithApiKey("POST", "/api/v1/devices", jsonData)
+		responseBody := make(map[string]interface{})
+		makeRequest(t, app, req, http.StatusCreated, &responseBody)
 
-		var createResponse map[string]interface{}
-		makeRequest(t, app, req, http.StatusCreated, &createResponse)
-
-		deviceMap := createResponse["device"].(map[string]interface{})
-		deviceID := int(deviceMap["id"].(float64))
-
-		dbDevice := &device.Device{ID: deviceID}
-		err = device.GetDeviceByID(context.Background(), db, dbDevice)
+		dbDevice := &device.Device{ID: int(responseBody["device"].(map[string]interface{})["id"].(float64))}
+		err = device.GetDeviceByID(ctx, db, dbDevice)
 		require.NoError(t, err)
 
 		assert.Equal(t, deviceData.Name, dbDevice.Name)
@@ -49,119 +50,91 @@ func TestDeviceAPI(t *testing.T) {
 	})
 
 	t.Run("Get Non-existent Device", func(t *testing.T) {
-		defer testDB.ClearDB(t)
-		app, _ := testDB.CreateApp(t)
-
-		req := httptest.NewRequest("GET", "/api/v1/devices/99999", nil)
-		SetAuthHeader(req)
-
+		req := JSONRequestWithApiKey("GET", "/api/v1/devices/9999999", nil)
 		makeRequest(t, app, req, http.StatusNotFound, nil)
 	})
 
 	t.Run("Unauthorized Request", func(t *testing.T) {
-		defer testDB.ClearDB(t)
-		app, _ := testDB.CreateApp(t)
-
 		req := httptest.NewRequest("GET", "/api/v1/devices/1", nil)
-
 		makeRequest(t, app, req, http.StatusUnauthorized, nil)
 	})
 
 	t.Run("Delete Device", func(t *testing.T) {
 		defer testDB.ClearDB(t)
-		app, db := testDB.CreateApp(t)
+		ctx := t.Context()
 
 		testDevice := createTestDevice()
 
-		err := device.InsertDevice(context.Background(), db, testDevice)
+		err := device.InsertDevice(ctx, db, testDevice)
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/devices/%d", testDevice.ID), nil)
-		SetAuthHeader(deleteReq)
+		deleteReq := JSONRequestWithApiKey("DELETE", fmt.Sprintf("/api/v1/devices/%d", testDevice.ID), nil)
+		makeRequest(t, app, deleteReq, http.StatusOK, nil)
 
-		var deleteResponse map[string]interface{}
-		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
-
-		verifyDevice := &device.Device{ID: testDevice.ID}
-		err = device.GetDeviceByID(context.Background(), db, verifyDevice)
+		err = device.GetDeviceByID(ctx, db, testDevice)
 		require.Error(t, err)
 	})
 
 	t.Run("Delete Non-existent Device", func(t *testing.T) {
-		defer testDB.ClearDB(t)
-		app, _ := testDB.CreateApp(t)
-
-		deleteReq := httptest.NewRequest("DELETE", "/api/v1/devices/99999", nil)
-		SetAuthHeader(deleteReq)
-
-		var deleteResponse map[string]interface{}
-		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
+		deleteReq := JSONRequestWithApiKey("DELETE", "/api/v1/devices/9999999", nil)
+		makeRequest(t, app, deleteReq, http.StatusOK, nil)
 	})
 
 	t.Run("Update Device Employee", func(t *testing.T) {
 		defer testDB.ClearDB(t)
-		app, db := testDB.CreateApp(t)
+		ctx := t.Context()
 
 		testDevice := createTestDevice(withEmployee("jsm"))
 
-		err := device.InsertDevice(context.Background(), db, testDevice)
-		require.NoError(t, err)
+		err := device.InsertDevice(ctx, db, testDevice)
+		require.NoError(t, err, "Failed to insert device")
 		require.NotZero(t, testDevice.ID)
 
 		employeeData := map[string]interface{}{
 			"employee": "jdo",
 		}
-
 		employeeJsonData, err := json.Marshal(employeeData)
 		require.NoError(t, err)
 
-		updateReq := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), bytes.NewBuffer(employeeJsonData))
-		SetAuthHeader(updateReq)
-		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq := JSONRequestWithApiKey("PUT", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), employeeJsonData)
+		makeRequest(t, app, updateReq, http.StatusOK, nil)
 
-		var updateResponse map[string]interface{}
-		makeRequest(t, app, updateReq, http.StatusOK, &updateResponse)
-
-		dbDevice := &device.Device{ID: testDevice.ID}
-		err = device.GetDeviceByID(context.Background(), db, dbDevice)
+		updatedDevice := &device.Device{ID: testDevice.ID}
+		err = device.GetDeviceByID(ctx, db, updatedDevice)
 		require.NoError(t, err)
-		assert.Equal(t, employeeData["employee"], *dbDevice.Employee, "Expected device employee be the same but is not")
-		assert.Equal(t, testDevice.Name, dbDevice.Name)
-		assert.Equal(t, testDevice.Type, dbDevice.Type)
-		assert.Equal(t, testDevice.IP, dbDevice.IP)
-		assert.Equal(t, testDevice.MAC, dbDevice.MAC)
+		assert.Equal(t, employeeData["employee"], *updatedDevice.Employee, "Expected device employee be the same but is not")
+		assert.Equal(t, testDevice.Name, updatedDevice.Name)
+		assert.Equal(t, testDevice.Type, updatedDevice.Type)
+		assert.Equal(t, testDevice.IP, updatedDevice.IP)
+		assert.Equal(t, testDevice.MAC, updatedDevice.MAC)
 	})
 
 	t.Run("Remove Device Employee", func(t *testing.T) {
 		defer testDB.ClearDB(t)
-		app, db := testDB.CreateApp(t)
+		ctx := t.Context()
 
 		testDevice := createTestDevice(withEmployee("jdo"))
-
-		err := device.InsertDevice(context.Background(), db, testDevice)
+		err := device.InsertDevice(ctx, db, testDevice)
 		require.NoError(t, err)
 		require.NotZero(t, testDevice.ID)
 
-		deleteReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), nil)
-		SetAuthHeader(deleteReq)
+		deleteReq := JSONRequestWithApiKey("DELETE", fmt.Sprintf("/api/v1/devices/%d/employee", testDevice.ID), nil)
+		makeRequest(t, app, deleteReq, http.StatusOK, nil)
 
-		var deleteResponse map[string]interface{}
-		makeRequest(t, app, deleteReq, http.StatusOK, &deleteResponse)
-
-		dbDevice := &device.Device{ID: testDevice.ID}
-		err = device.GetDeviceByID(context.Background(), db, dbDevice)
+		updatedDevice := &device.Device{ID: testDevice.ID}
+		err = device.GetDeviceByID(context.Background(), db, updatedDevice)
 		require.NoError(t, err)
-		assert.Nil(t, dbDevice.Employee, "Expected device to have no employee but employee field is not nil")
-		assert.Equal(t, testDevice.Name, dbDevice.Name, "Expected device name be the same but is not")
-		assert.Equal(t, testDevice.Type, dbDevice.Type, "Expected device type be the same but is not")
-		assert.Equal(t, testDevice.IP, dbDevice.IP, "Expected device IP be the same but is not")
-		assert.Equal(t, testDevice.MAC, dbDevice.MAC, "Expected device MAC be the same but is not")
+		assert.Nil(t, updatedDevice.Employee, "Expected device to have no employee but employee field is not nil")
+		assert.Equal(t, testDevice.Name, updatedDevice.Name, "Expected device name be the same but is not")
+		assert.Equal(t, testDevice.Type, updatedDevice.Type, "Expected device type be the same but is not")
+		assert.Equal(t, testDevice.IP, updatedDevice.IP, "Expected device IP be the same but is not")
+		assert.Equal(t, testDevice.MAC, updatedDevice.MAC, "Expected device MAC be the same but is not")
 	})
 
 	t.Run("Get Devices with Filters", func(t *testing.T) {
 		defer testDB.ClearDB(t)
-		app, db := testDB.CreateApp(t)
+		ctx := t.Context()
 
 		testDevices := []*device.Device{
 			createTestDevice(
@@ -188,7 +161,7 @@ func TestDeviceAPI(t *testing.T) {
 		}
 
 		for _, testDevice := range testDevices {
-			err := device.InsertDevice(context.Background(), db, testDevice)
+			err := device.InsertDevice(ctx, db, testDevice)
 			require.NoError(t, err)
 			require.NotZero(t, testDevice.ID)
 		}
@@ -246,7 +219,7 @@ func TestDeviceAPI(t *testing.T) {
 func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus int, response interface{}) {
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, expectedStatus, resp.StatusCode, "Expected status code %d but got %d and response: %s", expectedStatus, resp.StatusCode, resp.Body)
+	require.Equal(t, expectedStatus, resp.StatusCode, "Expected status code %d but got %d", expectedStatus, resp.StatusCode)
 
 	if response != nil && expectedStatus < 300 {
 		err = json.NewDecoder(resp.Body).Decode(response)
@@ -255,11 +228,15 @@ func makeRequest(t *testing.T, app *fiber.App, req *http.Request, expectedStatus
 }
 
 func BenchmarkDeviceCreation(b *testing.B) {
-	t := &testing.T{}
-	testDB := SetupTestDB(t)
-	defer testDB.Terminate(t)
+	ctx := context.Background()
+	testDB, err := NewTestDB(ctx)
+	require.NoError(b, err)
+	defer testDB.Terminate()
 
-	app, _ := testDB.CreateApp(&testing.T{})
+	db, err := testDB.GetConnectionPool()
+	require.NoError(b, err)
+
+	app := internal.CreateHttpServer(db, testAPIKey)
 
 	b.ResetTimer()
 

@@ -14,14 +14,18 @@ import (
 )
 
 func TestNotifyDeviceCount(t *testing.T) {
-	testDB := SetupTestDB(t)
-	defer testDB.Terminate(t)
-	_, db := testDB.CreateApp(t)
+	ctx := t.Context()
 
-	ctx := context.Background()
+	testDB, err := NewTestDB(ctx)
+	require.NoError(t, err)
+	defer testDB.Terminate()
+
 	notificationContainer, err := NewNotificationContainer(ctx)
 	require.NoError(t, err)
 	defer notificationContainer.Terminate()
+
+	db, err := testDB.GetConnectionPool()
+	require.NoError(t, err)
 
 	t.Run("Send http Notification", func(t *testing.T) {
 		client := &http.Client{
@@ -32,24 +36,29 @@ func TestNotifyDeviceCount(t *testing.T) {
 		assert.NoError(t, err)
 
 		body, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
 		assert.Contains(t, string(body), "jdo")
+
+		err = notificationContainer.WaitForLog("Notification successfully received", 10*time.Second)
+		assert.NoError(t, err)
+
+		err = notificationContainer.WaitForLog("jdo has 3 devices", 10*time.Second)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Notification Triggered When Employee Has 3+ Devices", func(t *testing.T) {
 		defer testDB.ClearDB(t)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 		defer cancel()
 
 		err := device.HandleDeviceCountNotifications(ctx, db, notificationContainer.GetNotificationURL())
 		assert.NoError(t, err)
 
 		testDevices := createTestDevicesForEmployee(3, "jdo")
-
 		for _, testDevice := range testDevices {
-			err := device.InsertDevice(context.Background(), db, testDevice)
+			err := device.InsertDevice(ctx, db, testDevice)
 			require.NoError(t, err)
 		}
 

@@ -3,9 +3,7 @@ package integration
 import (
 	"context"
 	"dmt/internal"
-	"encoding/base64"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,32 +11,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
-	testAPIKey = "test-api-key-123"
 	dbName     = "dmt_test"
 	dbUser     = "testuser"
 	dbPassword = "testpass"
 )
 
-var encodedAPIKey = base64.StdEncoding.EncodeToString([]byte(testAPIKey))
-
 type TestContainer struct {
 	Container  testcontainers.Container
 	ConnString string
+	ctx        context.Context
 }
 
-func SetupTestDB(t *testing.T) *TestContainer {
-	ctx := context.Background()
-
+func NewTestDB(ctx context.Context) (*TestContainer, error) {
 	container, err := postgres.Run(ctx,
 		"postgres:17-alpine",
 		postgres.WithDatabase(dbName),
@@ -47,45 +39,42 @@ func SetupTestDB(t *testing.T) *TestContainer {
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second)),
+				WithStartupTimeout(30*time.Second),
+		),
 	)
-	require.NoError(t, err, "Failed to start PostgreSQL container")
+	if err != nil {
+		return nil, fmt.Errorf("failed to start PostgreSQL container: %w", err)
+	}
 
 	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err, "Failed to get connection string")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection string: %w", err)
+	}
 
 	err = runMigrations(connStr)
-	require.NoError(t, err, "Failed to run migrations")
+	if err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
 
 	tc := &TestContainer{
 		Container:  container,
 		ConnString: connStr,
+		ctx:        ctx,
 	}
 
-	return tc
+	return tc, nil
 }
 
-func (tc *TestContainer) Terminate(t *testing.T) {
-	if err := testcontainers.TerminateContainer(tc.Container); err != nil {
-		t.Logf("Failed to terminate container: %v", err)
-	}
+func (tc *TestContainer) Terminate() error {
+	return tc.Container.Terminate(context.Background())
 }
 
-func (tc *TestContainer) CreateApp(t *testing.T) (*fiber.App, *pgxpool.Pool) {
-	ctx := context.Background()
-
-	db, err := internal.ConnectDb(ctx, tc.ConnString)
-	if err != nil {
-		t.Fatalf("Failed to connect to test database: %v", err)
-	}
-
-	app := internal.CreateHttpServer(db, testAPIKey)
-
-	return app, db
+func (tc *TestContainer) GetConnectionPool() (*pgxpool.Pool, error) {
+	return internal.ConnectDb(tc.ctx, tc.ConnString)
 }
 
 func (tc *TestContainer) ClearDB(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	conn, err := pgx.Connect(ctx, tc.ConnString)
 	if err != nil {
@@ -97,10 +86,6 @@ func (tc *TestContainer) ClearDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to clear database: %v", err)
 	}
-}
-
-func SetAuthHeader(req *http.Request) {
-	req.Header.Set("Authorization", "Bearer "+encodedAPIKey)
 }
 
 func runMigrations(connectionString string) error {

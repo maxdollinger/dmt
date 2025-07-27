@@ -14,7 +14,7 @@ import (
 type LogConsumer struct{}
 
 func (lc *LogConsumer) Accept(l testcontainers.Log) {
-	fmt.Printf("[NotificationTestContainer] %s\n", string(l.Content))
+	fmt.Printf("[NotificationTestContainer] %s", string(l.Content))
 }
 
 type NotificationContainer struct {

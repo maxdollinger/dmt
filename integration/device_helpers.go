@@ -95,7 +95,3 @@ func createTestDevicesForEmployee(count int, employee string, baseOpts ...Device
 
 	return devices
 }
-
-func stringPtr(s string) *string {
-	return &s
-}
