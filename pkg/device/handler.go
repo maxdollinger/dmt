@@ -1,6 +1,7 @@
 package device
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -55,7 +56,7 @@ func (s *DeviceHandler) GetDeviceByID(c *fiber.Ctx) error {
 	err = GetDeviceByID(c.Context(), s.db, device)
 	if err != nil {
 		log.Errorf("Failed to retrieve device: %s", err.Error())
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Device not found",
 			})
